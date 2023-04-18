@@ -1,0 +1,76 @@
+package com.smartapi.service;
+
+import com.smartapi.Configs;
+import lombok.extern.log4j.Log4j2;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Service;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.web.client.RestTemplate;
+
+import java.time.Instant;
+
+@Service
+@Log4j2
+public class SendMessage {
+
+	@Autowired
+	private JavaMailSender javaMailSender;
+
+	@Autowired
+	Configs configs;
+
+	@Autowired
+	RestTemplate restTemplate;
+
+	public void sendMessage(String message) {
+		if (message != null && message.contains("Failed to")) {
+			// reinit session repeated errors
+			long epochNow = Instant.now().getEpochSecond();
+			if (Math.abs(epochNow- configs.getReInitLastEpoch()) > 1800) {
+				configs.setReInitLastEpoch(epochNow);
+			} else {
+				log.info("Skipping mail for failure, as recently sent same mail");
+				return;
+			}
+		}
+
+		log.info("Sending message: {}", message);
+
+		HttpHeaders headers = new HttpHeaders();
+		String updateMessage = message.replaceAll(" ","+");
+		HttpEntity<String> httpEntity = new HttpEntity<>(headers);
+		ResponseEntity<Object> httpResponse;
+		String url = "https://api.callmebot.com/whatsapp.php?phone=918930091047&text="+updateMessage+"&apikey="+configs.getWhatsappApiKey();
+		try {
+			restTemplate.exchange(url, HttpMethod.GET, httpEntity, String.class);
+			//log.info("Fetched games {}", httpResponse.getBody().toString());
+			//return httpResponse.getBody();
+		} catch (Exception e) {
+			log.error("Error in sending message {}", message, e);
+			//return null;
+		}
+
+		/*
+		SimpleMailMessage msg = new SimpleMailMessage();
+		msg.setTo("vijaykumarvijay886@gmail.com");
+
+		msg.setSubject("Opt Trade, stop at max loss");
+		msg.setText(message);
+		msg.setFrom("vijaykumarvk5885@gmail.com");
+		try {
+			javaMailSender.send(msg);
+			log.info("Email sent");
+		} catch (Exception e) {
+			log.error("Error in sending mail ", e);
+		}
+
+		 */
+	}
+}
+
+
+

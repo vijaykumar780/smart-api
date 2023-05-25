@@ -17,7 +17,10 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.PostConstruct;
+import java.time.LocalTime;
 import java.util.Date;
+
+import static java.time.temporal.ChronoUnit.SECONDS;
 
 @Log4j2
 @Service
@@ -72,15 +75,21 @@ public class StopAtMaxLossScheduler {
         }
     }
 
-    @Scheduled(fixedDelay = 30000) // (fixedDelay = 150000)
+    @Scheduled(fixedDelay = 2000) // (fixedDelay = 150000)
     public void stopOnMaxLoss() throws InterruptedException {
         stopOnMaxLossProcess(false);
     }
 
     public void stopOnMaxLossProcess(boolean exitALLFlag) throws InterruptedException {
-        log.info("Starting Max loss tracker. Threshold {} at time {}", maxLossAmount, new Date());
+        LocalTime localStartTime = LocalTime.of(9,14,59);
+        LocalTime localEndTime = LocalTime.of(15,30,1);
+        LocalTime now = LocalTime.now();
+        if (!(now.isAfter(localStartTime) && now.isBefore(localEndTime))) {
+            log.info("Current time {} is beyond range {} to {}", now, localStartTime, localEndTime);
+            return;
+        }
+        log.info("Starting Max loss tracker. Threshold {} at time {}", maxLossAmount, now);
         if (historySmartConnect == null || tradingSmartConnect == null || marketSmartConnect ==null) {
-            Thread.sleep(1100);
             init();
         }
         JSONObject jsonObject = historySmartConnect.getPosition();
@@ -247,7 +256,7 @@ public class StopAtMaxLossScheduler {
             log.info("MTM: {}", mtm);
             log.info("Max Profit possible {}", sellamount - buyamount);
         }
-        log.info("Finished Max loss tracker");
+        log.info("Finished Max loss tracker at {}, time taken {} seconds", LocalTime.now(), SECONDS.between(now, LocalTime.now()));
     }
 
     public Double roundOff(Double val) {

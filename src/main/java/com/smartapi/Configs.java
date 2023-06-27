@@ -75,6 +75,9 @@ public class Configs {
 
 	String tradingSmartConnectRefreshToken;
 
+	@Value("${gmailPassword}")
+	String gmailPassword;
+
 	String marketSmartConnectRefreshToken;
 
 	String historySmartConnectRefreshToken;

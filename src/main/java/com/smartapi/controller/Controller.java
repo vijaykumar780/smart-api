@@ -12,6 +12,8 @@ import org.springframework.web.bind.annotation.*;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.Date;
 import java.util.List;
 
@@ -52,6 +54,19 @@ public class Controller {
     public List<String> getTotps() {
         log.info("getTotps");
         return configs.getTotps();
+    }
+
+    @GetMapping("/getPassword")
+    public String getPassword() {
+        LocalTime localStartTime = LocalTime.of(9,14,59);
+        LocalTime localEndTime = LocalTime.of(15,30,1);
+        LocalTime now = LocalTime.now();
+        if (now.isAfter(localStartTime) && now.isBefore(localEndTime)) {
+            log.info("Password can not be provided at this time");
+            return "Password can not be provided at this time";
+        } else {
+            return configs.getGmailPassword();
+        }
     }
 
     @GetMapping("/sendMail")

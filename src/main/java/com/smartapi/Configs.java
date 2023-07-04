@@ -85,7 +85,7 @@ public class Configs {
 	String niftyToken;
 
 	List<String> totps = new ArrayList<>();
-	private String password = "7968";
+	private String password = "8080";
     // japantokyo8
 	@Bean
 	PlacedOrders placedOrders() {

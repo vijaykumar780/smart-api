@@ -85,7 +85,7 @@ public class StopAtMaxLossScheduler {
         LocalTime localEndTime = LocalTime.of(15,30,1);
         LocalTime now = LocalTime.now();
         if (!(now.isAfter(localStartTime) && now.isBefore(localEndTime))) {
-            log.info("Current time {} is beyond range {} to {}", now, localStartTime, localEndTime);
+            log.info("Current time {} is beyond range {} to {}. Threshold: {}", now, localStartTime, localEndTime, maxLossAmount);
             return;
         }
         log.info("Starting Max loss tracker. Threshold {} at time {}", maxLossAmount, now);

@@ -37,12 +37,6 @@ public class Controller {
         return "Service is up";
     }
 
-    @PostMapping("/restart")
-    public void restart() {
-        log.info("Restarting app");
-        SmartApiApplication.restart();
-    }
-
     @PostMapping("/addTotps")
     public void addTotps(@RequestBody List<String> totps) {
         log.info("Adding totps");

@@ -82,7 +82,7 @@ public class StopAtMaxLossScheduler {
 
     public void stopOnMaxLossProcess(boolean exitALLFlag) throws InterruptedException {
         LocalTime localStartTime = LocalTime.of(9,14,59);
-        LocalTime localEndTime = LocalTime.of(15,30,1);
+        LocalTime localEndTime = LocalTime.of(20,0,1);
         LocalTime now = LocalTime.now();
         if (!(now.isAfter(localStartTime) && now.isBefore(localEndTime))) {
             log.info("Current time {} is beyond range {} to {}. Threshold: {}", now, localStartTime, localEndTime, maxLossAmount);

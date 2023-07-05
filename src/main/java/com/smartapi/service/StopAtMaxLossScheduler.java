@@ -81,11 +81,12 @@ public class StopAtMaxLossScheduler {
     }
 
     public void stopOnMaxLossProcess(boolean exitALLFlag) throws InterruptedException {
-        LocalTime localStartTime = LocalTime.of(9,14,59);
-        LocalTime localEndTime = LocalTime.of(20,0,1);
+        LocalTime localStartTimeMarket = LocalTime.of(8,0,0);
+        LocalTime localEndTime = LocalTime.of(23,50,1);
+        LocalTime localEndTimeMarket = LocalTime.of(15,30,1);
         LocalTime now = LocalTime.now();
-        if (!(now.isAfter(localStartTime) && now.isBefore(localEndTime))) {
-            log.info("Current time {} is beyond range {} to {}. Threshold: {}", now, localStartTime, localEndTime, maxLossAmount);
+        if (!(now.isAfter(localStartTimeMarket) && now.isBefore(localEndTime))) {
+            log.info("Current time {} is beyond range {} to {}. Threshold: {}", now, localStartTimeMarket, localEndTime, maxLossAmount);
             return;
         }
         log.info("Starting Max loss tracker. Threshold {} at time {}", maxLossAmount, now);
@@ -126,7 +127,11 @@ public class StopAtMaxLossScheduler {
         }
 
         if ((mtm <= 0 && Math.abs(mtm) >= maxLossAmount) || exitALLFlag) {
-            sendMail("Max MTM loss reached. Loss: " + mtm + " Threshold: " + maxLossAmount);
+            if (!(now.isAfter(localStartTimeMarket) && now.isBefore(localEndTimeMarket))) {
+                log.info("Current time {} is beyond range {} to {}. Skipping exit all pos", now, localStartTimeMarket, localEndTime, maxLossAmount);
+                return;
+            }
+            sendMail("[SL] Max MTM loss reached. Loss: " + mtm + " Threshold: " + maxLossAmount);
             log.info("Max MTM loss reached. Loss {}. maxLossAmount {}, starting to close all pos.", mtm, maxLossAmount);
             log.info("Fetching orders");
             JSONObject orders = marketSmartConnect.getOrderHistory("v122968");
@@ -160,7 +165,7 @@ public class StopAtMaxLossScheduler {
                 return;
             }
             log.info("Trying to close all open positions: {}", positionsJsonArray.length());
-            sendMail("Trying to close all open positions: {}");
+            sendMail("[SL] Trying to close all open positions: {}");
             for (int k = 0; k < positionsJsonArray.length(); k++) {
                 JSONObject pos = positionsJsonArray.optJSONObject(k);
                 log.info("Pos {}", pos.toString());
@@ -250,8 +255,9 @@ public class StopAtMaxLossScheduler {
                 }
             }
             log.info("[Probable closed all positions]. Validate manually");
-            sendMail("[Probable closed all positions]. Validate manually");
+            sendMail("[SL] [Probable closed all positions]. Validate manually");
             configs.setMaxLossEmailCount(configs.getMaxLossEmailCount() - 1);
+            configs.setSlHitSmsSent(true);
         } else {
             log.info("MTM: {}", mtm);
             log.info("Max Profit possible {}", sellamount - buyamount);
@@ -287,6 +293,7 @@ public class StopAtMaxLossScheduler {
         } else {
             log.info("re init session success");
         }
+        configs.setSlHitSmsSent(false);
     }
 
     public SmartConnect TradingSmartConnect (String totp) throws Exception, SmartAPIException {

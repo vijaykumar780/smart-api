@@ -1,5 +1,7 @@
 package com.smartapi.service;
 
+import com.amazonaws.services.sns.AmazonSNSClient;
+import com.amazonaws.services.sns.model.PublishRequest;
 import com.smartapi.Configs;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,6 +28,9 @@ public class SendMessage {
 	@Autowired
 	RestTemplate restTemplate;
 
+	@Autowired
+	AmazonSNSClient snsClient;
+
 	public void sendMessage(String message) {
 		if (message != null && message.contains("Failed to")) {
 			// reinit session repeated errors
@@ -33,13 +38,21 @@ public class SendMessage {
 			if (Math.abs(epochNow- configs.getReInitLastEpoch()) > 1800) {
 				configs.setReInitLastEpoch(epochNow);
 			} else {
-				log.info("Skipping mail for failure, as recently sent same mail");
+				log.info("Skipping message for failure, as recently sent same mail");
 				return;
 			}
 		}
 
-		log.info("Sending message: {}", message);
+		if (message != null && configs.isSlHitSmsSent()) {
+			log.info("Skipping message as sms already sent");
+			return;
+		}
 
+		log.info("Sending message: {}", message);
+		snsClient.publish(new PublishRequest("arn:aws:sns:ap-south-1:226716646987:sms", message));
+		log.info("Message sent");
+
+		/*
 		HttpHeaders headers = new HttpHeaders();
 		String updateMessage = message.replaceAll(" ","+");
 		HttpEntity<String> httpEntity = new HttpEntity<>(headers);
@@ -54,7 +67,7 @@ public class SendMessage {
 			//return null;
 		}
 
-		/*
+
 		SimpleMailMessage msg = new SimpleMailMessage();
 		msg.setTo("vijaykumarvijay886@gmail.com");
 

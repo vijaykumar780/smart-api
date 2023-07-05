@@ -70,6 +70,7 @@ public class Controller {
         return "sending Mail";
     }
 
+    /*
     @GetMapping("/exitAllPositions")
     public String exitAll(@RequestParam int hour) {
         log.info("Calling Exit all positions");
@@ -87,6 +88,7 @@ public class Controller {
         log.info("Exit all positions called");
         return "Exit all positions called";
     }
+     */
 
     @GetMapping("/logs")
     public String serviceCheck(@RequestParam int lines) {

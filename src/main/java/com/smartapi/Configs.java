@@ -1,5 +1,12 @@
 package com.smartapi;
 
+import com.amazonaws.auth.AWSCredentials;
+import com.amazonaws.auth.AWSStaticCredentialsProvider;
+import com.amazonaws.auth.BasicAWSCredentials;
+import com.amazonaws.client.builder.AwsClientBuilder;
+import com.amazonaws.services.sns.AmazonSNS;
+import com.amazonaws.services.sns.AmazonSNSClient;
+import com.amazonaws.services.sns.AmazonSNSClientBuilder;
 import com.angelbroking.smartapi.SmartConnect;
 import com.angelbroking.smartapi.http.exceptions.SmartAPIException;
 import com.angelbroking.smartapi.models.User;
@@ -52,6 +59,8 @@ public class Configs {
 
 	long reInitLastEpoch = 0;
 
+	boolean slHitSmsSent = false;
+
 	@Value("${marketPrivateKey}")
 	String marketPrivateKey;
 
@@ -77,6 +86,12 @@ public class Configs {
 
 	@Value("${gmailPassword}")
 	String gmailPassword;
+
+	@Value("${awsAccessKey}")
+	private String awsAccessKey;
+
+	@Value("${awsSecretKey}")
+	private String awsSecretKey;
 
 	String marketSmartConnectRefreshToken;
 
@@ -166,7 +181,16 @@ public class Configs {
 		return smartConnect;
 	}
 
-	public void reinitSession() {
+	@Bean
+	public AWSCredentials credentials() {
+		return new BasicAWSCredentials(awsAccessKey, awsSecretKey);
+	}
 
+	@Bean
+	public AmazonSNSClient  amazonSNS() {
+		return (AmazonSNSClient) AmazonSNSClientBuilder.standard()
+				.withCredentials(new AWSStaticCredentialsProvider(credentials()))
+				.withRegion("ap-south-1")
+				.build();
 	}
 }

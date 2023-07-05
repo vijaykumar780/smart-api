@@ -127,10 +127,6 @@ public class StopAtMaxLossScheduler {
         }
 
         if ((mtm <= 0 && Math.abs(mtm) >= maxLossAmount) || exitALLFlag) {
-            if (!(now.isAfter(localStartTimeMarket) && now.isBefore(localEndTimeMarket))) {
-                log.info("Current time {} is beyond range {} to {}. Skipping exit all pos", now, localStartTimeMarket, localEndTime, maxLossAmount);
-                return;
-            }
             sendMail("[SL] Max MTM loss reached. Loss: " + mtm + " Threshold: " + maxLossAmount);
             log.info("Max MTM loss reached. Loss {}. maxLossAmount {}, starting to close all pos.", mtm, maxLossAmount);
             log.info("Fetching orders");

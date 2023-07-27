@@ -7,6 +7,7 @@ import com.angelbroking.smartapi.models.OrderParams;
 import com.angelbroking.smartapi.models.User;
 import com.angelbroking.smartapi.utils.Constants;
 import com.smartapi.Configs;
+import com.smartapi.pojo.OrderData;
 import com.warrenstrange.googleauth.GoogleAuthenticator;
 import lombok.extern.log4j.Log4j2;
 import org.json.JSONArray;
@@ -18,7 +19,9 @@ import org.springframework.stereotype.Service;
 
 import javax.annotation.PostConstruct;
 import java.time.LocalTime;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 
 import static java.time.temporal.ChronoUnit.SECONDS;
 
@@ -89,7 +92,7 @@ public class StopAtMaxLossScheduler {
             log.info("Current time {} is beyond range {} to {}. Threshold: {}", now, localStartTimeMarket, localEndTime, maxLossAmount);
             return;
         }
-        log.info("Starting Max loss tracker. Threshold {} at time {}", maxLossAmount, now);
+        log.info("Starting Max loss tracker. Threshold: {} at time {}", maxLossAmount, now);
         if (historySmartConnect == null || tradingSmartConnect == null || marketSmartConnect ==null) {
             init();
         }
@@ -125,19 +128,21 @@ public class StopAtMaxLossScheduler {
                 buyamount = buyamount + Double.parseDouble(pos.optString("buyamount"));
             }
         }
+        log.info("Fetching orders");
+        JSONObject orders = marketSmartConnect.getOrderHistory("v122968");
+        if (orders == null) {
+            log.info("Re-fetch orders");
+            Thread.sleep(1100);
+            orders = marketSmartConnect.getOrderHistory("v122968");
+        }
 
-        if ((mtm <= 0 && Math.abs(mtm) >= maxLossAmount) || exitALLFlag) {
+        log.info("Fetched Orders {}", orders.toString());
+        JSONArray ordersJsonArray = orders.optJSONArray("data");
+        boolean isExitAllPosRequired = fetch2xSlOnPositions(ordersJsonArray, positionsJsonArray);
+        if ((mtm <= 0 && Math.abs(mtm) >= maxLossAmount) || exitALLFlag || isExitAllPosRequired) {
             sendMail("[SL] Max MTM loss reached. Loss: " + mtm + " Threshold: " + maxLossAmount);
             log.info("Max MTM loss reached. Loss {}. maxLossAmount {}, starting to close all pos.", mtm, maxLossAmount);
-            log.info("Fetching orders");
-            JSONObject orders = marketSmartConnect.getOrderHistory("v122968");
-            if (orders == null) {
-                log.info("Refetch orders");
-                Thread.sleep(1100);
-                orders = marketSmartConnect.getOrderHistory("v122968");
-            }
-            log.info("Fetched Orders {}", orders.toString());
-            JSONArray ordersJsonArray = orders.optJSONArray("data");
+
             if (ordersJsonArray == null || ordersJsonArray.isEmpty()) {
                 log.info("Orders array empty");
             } else {
@@ -260,6 +265,56 @@ public class StopAtMaxLossScheduler {
         }
         log.info("Finished Max loss tracker at {}, time taken {} seconds", LocalTime.now(), SECONDS.between(now, LocalTime.now()));
     }
+
+    private boolean fetch2xSlOnPositions(JSONArray ordersJsonArray, JSONArray positionsJsonArray) {
+        try {
+            int i;
+            String sellOptionSymbol = "";
+            Double ltp = 0.0;
+            Double soldPrice = 0.0;
+            if (ordersJsonArray == null || ordersJsonArray.isEmpty() || positionsJsonArray == null || positionsJsonArray.isEmpty()) {
+                log.info("Empty order or position array, skipping 2x sl check");
+                return false;
+            } else {
+                for (i = 0; i < positionsJsonArray.length(); i++) {
+                    JSONObject pos = positionsJsonArray.optJSONObject(i);
+                    if (pos != null && pos.optString("netqty").contains("-")) {
+                        sellOptionSymbol = pos.optString("tradingsymbol");
+                        ltp = Double.valueOf(pos.optString("ltp"));
+                        break;
+                    }
+                }
+                if (sellOptionSymbol.isEmpty()) {
+                    log.info("Sell pos not found, skipping");
+                    return false;
+                }
+                List<OrderData> orderDataList = new ArrayList<>();
+                // orders are in ascending order of time
+                for (i = ordersJsonArray.length() - 1; i >= 0; i--) {
+                    JSONObject order = ordersJsonArray.optJSONObject(i);
+                    if (order != null && sellOptionSymbol.equals(order.optString("tradingsymbol")) && "complete".equals(order.optString("orderstatus"))) {
+                        soldPrice = order.optDouble("averageprice");
+                        break;
+                    }
+                }
+                Double slPrice;
+                if (soldPrice < 5.0) {
+                    slPrice = 2 * soldPrice + 3;
+                } else if (soldPrice >= 5.0 && soldPrice <= 10.0) {
+                    slPrice = 2 * soldPrice + 2;
+                } else {
+                    slPrice = 2 * soldPrice;
+                }
+                boolean slHitRequired = (ltp >= slPrice);
+                log.info("[2x sl check] Symbol: {}, soldPrice: {}, ltp: {}, Sl price: {}, sl Hit Required: {}", sellOptionSymbol, soldPrice, ltp, slPrice, slHitRequired);
+                return slHitRequired;
+            }
+        } catch (Exception e) {
+            log.error("Error in checking 2x sl", e);
+            return false;
+        }
+    }
+
 
     public Double roundOff(Double val) {
         return Math.round(val*10.0)/10.0;

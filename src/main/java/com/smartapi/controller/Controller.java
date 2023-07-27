@@ -6,6 +6,7 @@ import com.smartapi.service.SendMessage;
 import com.smartapi.service.StopAtMaxLossScheduler;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.*;
 
@@ -30,6 +31,9 @@ public class Controller {
 
     @Autowired
     Configs configs;
+
+    @Autowired
+    Environment environment;
 
     @GetMapping("/servicecheck")
     public String serviceCheck() {
@@ -92,12 +96,9 @@ public class Controller {
 
     @GetMapping("/logs")
     public String serviceCheck(@RequestParam int lines) {
-        String homeFolder = System.getProperty("user.home");
+        String homeFolder = environment.getProperty("logging.file.name");
         log.info("Request to fetch logs of {} lines. Home folder {}", lines, homeFolder);
-        if (!homeFolder.endsWith("/")) {
-            homeFolder = homeFolder + "/";
-        }
-        homeFolder = homeFolder + "smart-api-logs/logs.log";
+
         try {
             File logFile = new File(homeFolder);
             BufferedReader br = new BufferedReader(new FileReader(logFile));

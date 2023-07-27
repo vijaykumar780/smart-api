@@ -39,7 +39,6 @@ import java.util.*;
 @PropertySources({
 		@PropertySource(value = {"file:////Users/b0224854/Trade/configs.conf"}, ignoreResourceNotFound = true),
 		@PropertySource(value = {"file:D:\\Trade\\tradeConfigs.conf"}, ignoreResourceNotFound = true),
-		@PropertySource(value = {"file:////home/vijaykumarvijay886cloud2/Trade/tradeConfigs.conf"}, ignoreResourceNotFound = true),
 		@PropertySource(value = {"file:////home/vijaykumarvijay886/Trade/tradeConfigs.conf"}, ignoreResourceNotFound = true),})
 @Getter
 @Log4j2

@@ -114,10 +114,31 @@ public class StopAtMaxLossScheduler {
             return;
         }
 
-        Double buyamount =0.0;
-        Double sellamount =0.0;
+        log.info("Fetching orders");
+        JSONObject orders = marketSmartConnect.getOrderHistory("v122968");
+        if (orders == null) {
+            log.info("Re-fetch orders");
+            Thread.sleep(1100);
+            orders = marketSmartConnect.getOrderHistory("v122968");
+        }
+
+        log.info("Fetched Orders {}", orders.toString());
+
+        JSONArray ordersJsonArray = orders.optJSONArray("data");
+        processSlScheduler(ordersJsonArray, positionsJsonArray, exitALLFlag, now);
+
+    }
+
+    public void processSlScheduler(JSONArray ordersJsonArray,
+                                    JSONArray positionsJsonArray,
+                                    boolean exitALLFlag,
+                                    LocalTime now) {
+        boolean isExitAllPosRequired = fetch2xSlOnPositions(ordersJsonArray, positionsJsonArray);
+        boolean isExitRequiredForReTradeAtSl = isExitRequiredForReTradeAtSl(ordersJsonArray, positionsJsonArray);
 
         Double mtm = 0.00;
+        Double buyamount = 0.0;
+        Double sellamount = 0.0;
         for (int i = 0; i < positionsJsonArray.length(); i++) {
             JSONObject pos = positionsJsonArray.optJSONObject(i);
             mtm = mtm + Double.parseDouble(pos.optString("pnl"));
@@ -128,18 +149,6 @@ public class StopAtMaxLossScheduler {
                 buyamount = buyamount + Double.parseDouble(pos.optString("buyamount"));
             }
         }
-        log.info("Fetching orders");
-        JSONObject orders = marketSmartConnect.getOrderHistory("v122968");
-        if (orders == null) {
-            log.info("Re-fetch orders");
-            Thread.sleep(1100);
-            orders = marketSmartConnect.getOrderHistory("v122968");
-        }
-
-        log.info("Fetched Orders {}", orders.toString());
-        JSONArray ordersJsonArray = orders.optJSONArray("data");
-        boolean isExitAllPosRequired = fetch2xSlOnPositions(ordersJsonArray, positionsJsonArray);
-        boolean isExitRequiredForReTradeAtSl = isExitRequiredForReTradeAtSl(ordersJsonArray, positionsJsonArray);
         if ((mtm <= 0 && Math.abs(mtm) >= maxLossAmount) || exitALLFlag || isExitAllPosRequired || isExitRequiredForReTradeAtSl) {
             log.info("Flags exitALLFlag {}, isExitAllPosRequired {}, isExitRequiredForReTradeAtSl {}", exitALLFlag, isExitAllPosRequired, isExitRequiredForReTradeAtSl);
             sendMail("[SL] Max MTM loss reached. Loss: " + mtm + " Threshold: " + maxLossAmount);

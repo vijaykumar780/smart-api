@@ -6,6 +6,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
+
 @Service
 @Log4j2
 public class TokenRefresh {
@@ -92,9 +94,10 @@ public class TokenRefresh {
 */
     @Scheduled(cron = "0 45 8 * * ?")
     public void reInitEmail() {
-        int ct = 80;
-        sendMessage.sendMessage("Re init email count threshold " + ct);
+        int ct = 50;
+        sendMessage.sendMessage("Re init email count threshold and SymbolExitedFromScheduler" + ct);
         configs.setMaxLossEmailCount(ct);
+        configs.setSymbolExitedFromScheduler(new ArrayList<>());
         log.info("Re inited email count threshold");
     }
 }

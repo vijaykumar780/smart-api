@@ -139,7 +139,9 @@ public class StopAtMaxLossScheduler {
         log.info("Fetched Orders {}", orders.toString());
         JSONArray ordersJsonArray = orders.optJSONArray("data");
         boolean isExitAllPosRequired = fetch2xSlOnPositions(ordersJsonArray, positionsJsonArray);
-        if ((mtm <= 0 && Math.abs(mtm) >= maxLossAmount) || exitALLFlag || isExitAllPosRequired) {
+        boolean isExitRequiredForReTradeAtSl = isExitRequiredForReTradeAtSl(ordersJsonArray, positionsJsonArray);
+        if ((mtm <= 0 && Math.abs(mtm) >= maxLossAmount) || exitALLFlag || isExitAllPosRequired || isExitRequiredForReTradeAtSl) {
+            log.info("Flags exitALLFlag {}, isExitAllPosRequired {}, isExitRequiredForReTradeAtSl {}", exitALLFlag, isExitAllPosRequired, isExitRequiredForReTradeAtSl);
             sendMail("[SL] Max MTM loss reached. Loss: " + mtm + " Threshold: " + maxLossAmount);
             log.info("Max MTM loss reached. Loss {}. maxLossAmount {}, starting to close all pos.", mtm, maxLossAmount);
 
@@ -208,6 +210,13 @@ public class StopAtMaxLossScheduler {
                                 }
                                 Thread.sleep(290);
                                 log.info("Order placed to close pos {}", order);
+                                try {
+                                    List<String> symbolsExitedFromScheduler = configs.getSymbolExitedFromScheduler();
+                                    symbolsExitedFromScheduler.add(pos.optString("tradingsymbol"));
+                                    configs.setSymbolExitedFromScheduler(symbolsExitedFromScheduler);
+                                } catch (Exception e) {
+                                    log.error("Error in setting symbolsExitedFromScheduler ", e);
+                                }
                             } else {
                                 break;
                             }
@@ -266,6 +275,42 @@ public class StopAtMaxLossScheduler {
         log.info("Finished Max loss tracker at {}, time taken {} seconds", LocalTime.now(), SECONDS.between(now, LocalTime.now()));
     }
 
+    private boolean isExitRequiredForReTradeAtSl(JSONArray ordersJsonArray, JSONArray positionsJsonArray) {
+        List<String> symbolExitedFromScheduler = configs.getSymbolExitedFromScheduler();
+        int i, j;
+        String sellOptionSymbol = "";
+        Double ltp = 0.0;
+        Double soldPrice = 0.0;
+        // check if there is any open pos with symbolExitedFromScheduler
+        for (i = 0; i < positionsJsonArray.length(); i++) {
+            JSONObject pos = positionsJsonArray.optJSONObject(i);
+            if (pos != null && pos.optString("netqty").contains("-")) {
+                sellOptionSymbol = pos.optString("tradingsymbol");
+                ltp = Double.valueOf(pos.optString("ltp"));
+                if (symbolExitedFromScheduler.contains(sellOptionSymbol)) {
+                    // find its order
+                    for (j = ordersJsonArray.length() - 1; j >= 0; j--) {
+                        JSONObject order = ordersJsonArray.optJSONObject(j);
+                        if (order != null && sellOptionSymbol.equals(order.optString("tradingsymbol"))
+                                && "complete".equals(order.optString("orderstatus")) && "SELL".equals(order.optString("transactiontype"))) {
+                            soldPrice = order.optDouble("averageprice");
+                            break;
+                        }
+                    }
+                    Double price = 10.0;
+                    if (soldPrice >= price) {
+                        String error = String.format("Re-trade (whose sl was hit earlier) found for option at price above %s, for symbol %s. Will close all pos, check manually also", price, sellOptionSymbol);
+                        log.error(error);
+                        sendMail(error);
+                        // sold price is above 10 and its a retrade whose sl was hit earlier
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
     private boolean fetch2xSlOnPositions(JSONArray ordersJsonArray, JSONArray positionsJsonArray) {
         try {
             int i;
@@ -307,6 +352,11 @@ public class StopAtMaxLossScheduler {
                 }
                 boolean slHitRequired = (ltp >= slPrice);
                 log.info("[2x sl check] Symbol: {}, soldPrice: {}, ltp: {}, Sl price: {}, sl Hit Required: {}", sellOptionSymbol, soldPrice, ltp, slPrice, slHitRequired);
+                if (slHitRequired) {
+                    String slHitReq = String.format("Sl hit required for 2x sl. symbol %s, sl price %s. Will close all pos, check manually also", sellOptionSymbol, slPrice);
+                    log.info(slHitReq);
+                    sendMail(slHitReq);
+                }
                 return slHitRequired;
             }
         } catch (Exception e) {

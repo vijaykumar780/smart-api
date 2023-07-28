@@ -92,6 +92,8 @@ public class Configs {
 	@Value("${awsSecretKey}")
 	private String awsSecretKey;
 
+	private List<String> symbolExitedFromScheduler;
+
 	String marketSmartConnectRefreshToken;
 
 	String historySmartConnectRefreshToken;

@@ -9,23 +9,34 @@ import org.json.JSONException;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.junit.Before;
 
 import java.time.LocalTime;
+import java.util.ArrayList;
+import java.util.Arrays;
 
 @SpringBootTest
 @Log4j2
 class SmartApiApplicationTests {
 
+    @Mock
+    Configs configs;
+
     private StopAtMaxLossScheduler stopAtMaxLossScheduler = new StopAtMaxLossScheduler();
 
     @Test
-    public void stopLossScheduler() throws InterruptedException, JSONException {
+    public void stopLossScheduler2xSl() throws InterruptedException, JSONException {
         log.info("Stop loss scheduler test");
         JSONArray orders = getOrders();
         JSONArray positions = getPos();
-        stopAtMaxLossScheduler.processSlScheduler(orders, positions, false, LocalTime.now());
+        // Sl hit due to 2x sl
+        log.info("TC 1");
+        stopAtMaxLossScheduler.processSlScheduler(orders, positions, false, LocalTime.now(), new ArrayList<>());
+        // sl hit due to re trade of old wrong trade
+        log.info("TC 2");
+
+        stopAtMaxLossScheduler.processSlScheduler(orders, positions, false, LocalTime.now(), Arrays.asList("NIFTY03AUG2319100PE"));
     }
 
     private JSONArray getPos() throws JSONException {
@@ -79,7 +90,7 @@ class SmartApiApplicationTests {
                 "            \"expirydate\": \"03AUG2023\",\n" +
                 "            \"netvalue\": \"1530.00\",\n" +
                 "            \"optiontype\": \"PE\",\n" +
-                "            \"netqty\": \"0\",\n" +
+                "            \"netqty\": \"-500\",\n" +
                 "            \"pricenum\": \"1.00\",\n" +
                 "            \"totalsellvalue\": \"27180.00\",\n" +
                 "            \"precision\": \"2\",\n" +
@@ -103,7 +114,7 @@ class SmartApiApplicationTests {
                 "            \"cfbuyqty\": \"0\",\n" +
                 "            \"cfsellamount\": \"0.00\",\n" +
                 "            \"totalsellavgprice\": \"6.04\",\n" +
-                "            \"ltp\": \"4.75\",\n" +
+                "            \"ltp\": \"24.75\",\n" +
                 "            \"avgnetprice\": \"0.00\",\n" +
                 "            \"symbolgroup\": \"XX\",\n" +
                 "            \"pnl\": \"1530.00\",\n" +
@@ -177,7 +188,7 @@ class SmartApiApplicationTests {
                 "        \"instrumenttype\": \"OPTIDX\",\n" +
                 "        \"variety\": \"NORMAL\",\n" +
                 "        \"price\": 0,\n" +
-                "        \"averageprice\": 6.05,\n" +
+                "        \"averageprice\": 10.1,\n" +
                 "        \"fillid\": \"\",\n" +
                 "        \"tradingsymbol\": \"NIFTY03AUG2319100PE\",\n" +
                 "        \"strikeprice\": 19100,\n" +

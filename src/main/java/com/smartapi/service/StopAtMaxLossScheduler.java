@@ -79,11 +79,11 @@ public class StopAtMaxLossScheduler {
     }
 
     @Scheduled(fixedDelay = 2000) // (fixedDelay = 150000)
-    public void stopOnMaxLoss() throws InterruptedException {
+    public void stopOnMaxLoss() throws Exception {
         stopOnMaxLossProcess(false);
     }
 
-    public void stopOnMaxLossProcess(boolean exitALLFlag) throws InterruptedException {
+    public void stopOnMaxLossProcess(boolean exitALLFlag) throws Exception {
         LocalTime localStartTimeMarket = LocalTime.of(8,0,0);
         LocalTime localEndTime = LocalTime.of(23,50,1);
         LocalTime localEndTimeMarket = LocalTime.of(15,30,1);
@@ -125,16 +125,17 @@ public class StopAtMaxLossScheduler {
         log.info("Fetched Orders {}", orders.toString());
 
         JSONArray ordersJsonArray = orders.optJSONArray("data");
-        processSlScheduler(ordersJsonArray, positionsJsonArray, exitALLFlag, now);
+        processSlScheduler(ordersJsonArray, positionsJsonArray, exitALLFlag, now, configs.getSymbolExitedFromScheduler());
 
     }
 
     public void processSlScheduler(JSONArray ordersJsonArray,
                                     JSONArray positionsJsonArray,
                                     boolean exitALLFlag,
-                                    LocalTime now) {
+                                    LocalTime now,
+                                   List<String> slSymbols) throws InterruptedException {
         boolean isExitAllPosRequired = fetch2xSlOnPositions(ordersJsonArray, positionsJsonArray);
-        boolean isExitRequiredForReTradeAtSl = isExitRequiredForReTradeAtSl(ordersJsonArray, positionsJsonArray);
+        boolean isExitRequiredForReTradeAtSl = isExitRequiredForReTradeAtSl(ordersJsonArray, positionsJsonArray, slSymbols);
 
         Double mtm = 0.00;
         Double buyamount = 0.0;
@@ -154,7 +155,7 @@ public class StopAtMaxLossScheduler {
             sendMail("[SL] Max MTM loss reached. Loss: " + mtm + " Threshold: " + maxLossAmount);
             log.info("Max MTM loss reached. Loss {}. maxLossAmount {}, starting to close all pos.", mtm, maxLossAmount);
 
-            if (ordersJsonArray == null || ordersJsonArray.isEmpty()) {
+            if (ordersJsonArray == null || ordersJsonArray.length()==0) {
                 log.info("Orders array empty");
             } else {
                 for (int i = 0; i < ordersJsonArray.length(); i++) {
@@ -172,14 +173,15 @@ public class StopAtMaxLossScheduler {
                     }
                 }
             }
-            if (positionsJsonArray == null || positionsJsonArray.isEmpty()) {
+            if (positionsJsonArray == null || positionsJsonArray.length()==0) {
                 log.info("Empty positions, skipping");
                 return;
             }
-            log.info("Trying to close all open positions: {}", positionsJsonArray.length());
+            JSONArray updatedPosArray = getUpdatedPosArray(positionsJsonArray);
+            log.info("Trying to close all open positions: {}", updatedPosArray.length());
             sendMail("[SL] Trying to close all open positions: {}");
-            for (int k = 0; k < positionsJsonArray.length(); k++) {
-                JSONObject pos = positionsJsonArray.optJSONObject(k);
+            for (int k = 0; k < updatedPosArray.length(); k++) {
+                JSONObject pos = updatedPosArray.optJSONObject(k);
                 log.info("Pos {}", pos.toString());
                 if (!pos.optString("buyqty").equals(pos.optString("sellqty"))) {
                     int buyQty = Integer.valueOf(pos.optString("buyqty"));
@@ -275,8 +277,13 @@ public class StopAtMaxLossScheduler {
             }
             log.info("[Probable closed all positions]. Validate manually");
             sendMail("[SL] [Probable closed all positions]. Validate manually");
-            configs.setMaxLossEmailCount(configs.getMaxLossEmailCount() - 1);
-            configs.setSlHitSmsSent(true);
+            try {
+                configs.setMaxLossEmailCount(configs.getMaxLossEmailCount() - 1);
+                configs.setSlHitSmsSent(true);
+            } catch (Exception e) {
+                log.error("Error in updating configs with sl hit");
+            }
+
         } else {
             log.info("MTM: {}", mtm);
             log.info("Max Profit possible {}", sellamount - buyamount);
@@ -284,8 +291,29 @@ public class StopAtMaxLossScheduler {
         log.info("Finished Max loss tracker at {}, time taken {} seconds", LocalTime.now(), SECONDS.between(now, LocalTime.now()));
     }
 
-    private boolean isExitRequiredForReTradeAtSl(JSONArray ordersJsonArray, JSONArray positionsJsonArray) {
-        List<String> symbolExitedFromScheduler = configs.getSymbolExitedFromScheduler();
+    private JSONArray getUpdatedPosArray(JSONArray positionsJsonArray) {
+        JSONArray updatedPos = new JSONArray();
+        JSONArray soldPos = new JSONArray();
+        JSONArray buyPos = new JSONArray();
+        for (int i = 0; i < positionsJsonArray.length(); i++) {
+            JSONObject jsonObject = positionsJsonArray.optJSONObject(i);
+            if (jsonObject.optString("netqty").contains("-")) {
+                // sold pos
+                soldPos.put(jsonObject);
+            } else {
+                buyPos.put(jsonObject);
+            }
+        }
+        for (int i = 0; i < soldPos.length(); i++) {
+            updatedPos.put(soldPos.optJSONObject(i));
+        }
+        for (int i = 0; i < buyPos.length(); i++) {
+            updatedPos.put(buyPos.optJSONObject(i));
+        }
+        return updatedPos;
+    }
+
+    private boolean isExitRequiredForReTradeAtSl(JSONArray ordersJsonArray, JSONArray positionsJsonArray, List<String> symbolExitedFromScheduler) {
         int i, j;
         String sellOptionSymbol = "";
         Double ltp = 0.0;
@@ -326,7 +354,7 @@ public class StopAtMaxLossScheduler {
             String sellOptionSymbol = "";
             Double ltp = 0.0;
             Double soldPrice = 0.0;
-            if (ordersJsonArray == null || ordersJsonArray.isEmpty() || positionsJsonArray == null || positionsJsonArray.isEmpty()) {
+            if (ordersJsonArray == null || ordersJsonArray.length()==0 || positionsJsonArray == null || positionsJsonArray.length()==0) {
                 log.info("Empty order or position array, skipping 2x sl check");
                 return false;
             } else {
@@ -380,8 +408,12 @@ public class StopAtMaxLossScheduler {
     }
 
     private void sendMail(String msg) {
-        if (configs.getMaxLossEmailCount() > 0) {
-            sendMessage.sendMessage(msg);
+        try {
+            if (configs.getMaxLossEmailCount() > 0) {
+                sendMessage.sendMessage(msg);
+            }
+        } catch (Exception e) {
+            log.error("Error sending mail {}", msg);
         }
     }
 

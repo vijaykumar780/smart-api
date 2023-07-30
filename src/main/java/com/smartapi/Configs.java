@@ -37,7 +37,7 @@ import java.util.*;
 
 @Configuration
 @PropertySources({
-		@PropertySource(value = {"file:////Users/b0224854/Trade/configs.conf"}, ignoreResourceNotFound = true),
+		//@PropertySource(value = {"file:////Users/b0224854/Trade/configs.conf"}, ignoreResourceNotFound = true),
 		@PropertySource(value = {"file:D:\\Trade\\tradeConfigs.conf"}, ignoreResourceNotFound = true),
 		@PropertySource(value = {"file:////home/vijaykumarvijay886/Trade/tradeConfigs.conf"}, ignoreResourceNotFound = true),})
 @Getter
@@ -92,6 +92,11 @@ public class Configs {
 	@Value("${awsSecretKey}")
 	private String awsSecretKey;
 
+	@Value("${oiChangePercent}")
+	private int oiPercent;
+
+	private String tokenForMarketData;
+
 	private List<String> symbolExitedFromScheduler;
 
 	String marketSmartConnectRefreshToken;
@@ -112,6 +117,9 @@ public class Configs {
 	public RestTemplate restTemplate() {
 		return new RestTemplate();
 	}
+
+	private int niftyValue = 19000;
+	private int finniftyValue = 20000;
 
 	//@Bean("tradingSmartConnect")
 	public SmartConnect TradingSmartConnect() throws Exception, SmartAPIException {

@@ -64,6 +64,7 @@ public class StopAtMaxLossScheduler {
                 this.tradingSmartConnect = TradingSmartConnect(totp);
                 this.marketSmartConnect = MarketSmartConnect(totp);
                 this.historySmartConnect = historySmartConnect(totp);
+                configs.setTokenForMarketData(marketSmartConnect.getAccessToken());
                 initCt = true;
                 break;
             } catch (Exception | SmartAPIException e) {

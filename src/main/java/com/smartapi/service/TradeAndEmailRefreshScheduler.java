@@ -6,6 +6,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+
 @Service
 @Log4j2
 public class TradeAndEmailRefreshScheduler {
@@ -24,8 +27,9 @@ public class TradeAndEmailRefreshScheduler {
     }
 
     @Scheduled(fixedDelay = 1640000000)
-    public void refreshEmail() {
-        sendMessage.sendMessage("App started");
+    public void refreshEmail() throws UnknownHostException {
+
+        sendMessage.sendMessage("App started " + InetAddress.getLocalHost().toString());
         log.info("Start Email sent");
     }
 }

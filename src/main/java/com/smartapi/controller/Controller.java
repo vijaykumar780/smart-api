@@ -54,6 +54,13 @@ public class Controller {
         return configs.getTotps();
     }
 
+    @GetMapping("/updateIndex")
+    public void updateIndex(@RequestParam int nifty, @RequestParam int finnifty) {
+        log.info("updated index values");
+        configs.setNiftyValue(nifty);
+        configs.setFinniftyValue(finnifty);
+    }
+
     @GetMapping("/getPassword")
     public String getPassword() {
         LocalTime localStartTime = LocalTime.of(9,14,59);

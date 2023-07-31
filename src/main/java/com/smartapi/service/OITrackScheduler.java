@@ -140,7 +140,7 @@ public class OITrackScheduler {
             boolean sendMail = localDateTime.getDayOfWeek().equals(DayOfWeek.THURSDAY) || localDateTime.getDayOfWeek().equals(DayOfWeek.TUESDAY);
             //if (localDateTime.getDayOfWeek().equals(DayOfWeek.THURSDAY) || localDateTime.getDayOfWeek().equals(DayOfWeek.TUESDAY)) {
 
-            LocalTime localStartTimeMarket = LocalTime.of(9, 40, 0);
+            LocalTime localStartTimeMarket = LocalTime.of(9, 41, 0);
             LocalTime localEndTime = LocalTime.of(23, 50, 1);
             LocalTime now1 = LocalTime.now();
             if (!(now1.isAfter(localStartTimeMarket) && now1.isBefore(localEndTime))) {
@@ -168,17 +168,19 @@ public class OITrackScheduler {
                             continue;
                         }
                         if (oiMap.containsKey(symbolData.getSymbol())) {
-                            int changePercent;
+                            double changePercent;
                             if (oiMap.get(symbolData.getSymbol()) == 0) {
                                 changePercent = 0;
                             } else {
-                                changePercent = Math.abs(oiMap.get(symbolData.getSymbol()) - oi) / oiMap.get(symbolData.getSymbol());
+                                changePercent = ((double) (oi - oiMap.get(symbolData.getSymbol())) / (double) oiMap.get(symbolData.getSymbol()))*100.0;
                             }
-                            String response = String.format("Index: %s, Option: %s, current oi: %d, Change percent: %d Symbol: %s", "NIFTY", symbolData.getStrike() + " " +
+                            String response = String.format("Index: %s, Option: %s, current oi: %d, Change percent: %f Symbol: %s", "NIFTY", symbolData.getStrike() + " " +
                                     symbolData.getSymbol().substring(symbolData.getSymbol().length() - 2), oi, changePercent, symbolData.getSymbol());
 
-                            if (changePercent >= configs.getOiPercent() && sendMail) {
+                            if (Math.abs(changePercent) >= configs.getOiPercent() && sendMail) {
                                 sendMessage.sendMessage(response);
+                            } else if ((Math.abs(changePercent) >= configs.getOiPercent())) {
+                                log.info("{} has change % above oi percent", symbolData.getSymbol());
                             }
                             oiMap.put(symbolData.getSymbol(), oi);
                             log.info("OI Data | {}", response);
@@ -197,17 +199,19 @@ public class OITrackScheduler {
                             continue;
                         }
                         if (oiMap.containsKey(symbolData.getSymbol())) {
-                            int changePercent;
+                            double changePercent;
                             if (oiMap.get(symbolData.getSymbol()) == 0) {
                                 changePercent = 0;
                             } else {
-                                changePercent = Math.abs(oiMap.get(symbolData.getSymbol()) - oi) / oiMap.get(symbolData.getSymbol());
+                                changePercent = ((double) (oi - oiMap.get(symbolData.getSymbol())) / (double) oiMap.get(symbolData.getSymbol()))*100.0;
                             }
-                            String response = String.format("Index: %s, Option: %s, current oi: %d, Change percent: %d Symbol: %s", "FINNIFTY", symbolData.getStrike() + " " +
+                            String response = String.format("Index: %s, Option: %s, current oi: %d, Change percent: %f Symbol: %s", "FINNIFTY", symbolData.getStrike() + " " +
                                     symbolData.getSymbol().substring(symbolData.getSymbol().length() - 2), oi, changePercent, symbolData.getSymbol());
 
-                            if (changePercent >= configs.getOiPercent() && sendMail) {
+                            if (Math.abs(changePercent) >= configs.getOiPercent() && sendMail) {
                                 sendMessage.sendMessage(response);
+                            } else if ((Math.abs(changePercent) >= configs.getOiPercent())) {
+                                log.info("{} has change % above oi percent", symbolData.getSymbol());
                             }
                             oiMap.put(symbolData.getSymbol(), oi);
                             log.info("OI Data | {}", response);

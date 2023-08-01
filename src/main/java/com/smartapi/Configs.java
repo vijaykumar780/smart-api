@@ -97,7 +97,7 @@ public class Configs {
 
 	private String tokenForMarketData;
 
-	private List<String> symbolExitedFromScheduler;
+	private List<String> symbolExitedFromScheduler = new ArrayList<>();
 
 	String marketSmartConnectRefreshToken;
 

@@ -54,11 +54,13 @@ public class Controller {
         return configs.getTotps();
     }
 
-    @GetMapping("/updateIndex")
-    public void updateIndex(@RequestParam int nifty, @RequestParam int finnifty) {
-        log.info("updated index values");
+    @GetMapping("/updateConfigs")
+    public void updateIndex(@RequestParam (required = true) int nifty, @RequestParam (required = true) int finnifty,
+                            @RequestParam (required = true) int oiPercent) {
+        log.info("updated config values");
         configs.setNiftyValue(nifty);
         configs.setFinniftyValue(finnifty);
+        configs.setOiPercent(oiPercent);
     }
 
     @GetMapping("/getPassword")

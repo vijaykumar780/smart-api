@@ -37,6 +37,7 @@ public class OITrackScheduler {
 
     @PostConstruct
     public void init () {
+        oiMap = new HashMap<>();
         log.info("Initializing rest template");
         restTemplate = new RestTemplateBuilder().setConnectTimeout(Duration.ofSeconds(10))
                 .setReadTimeout(Duration.ofSeconds(10))
@@ -78,13 +79,36 @@ public class OITrackScheduler {
                 if (Arrays.asList("NIFTY","FINNIFTY").contains(symbolData.getName())
                         && "NFO".equals(ob.optString("exch_seg"))) {
                     symbolDataList.add(symbolData);
+                    if (!oiMap.containsKey(symbolData.getName())) {
+                        oiMap.put(symbolData.getSymbol(), 100);
+                    }
                 }
             }
+            symbolDataList.sort(new Comparator<SymbolData>() {
+                @Override
+                public int compare(SymbolData o1, SymbolData o2) {
+                    if (o1.getStrike()<o2.getStrike()) {
+                        return -1;
+                    } else {
+                        return 1;
+                    }
+                }
+            });
+            symbolDataList.sort(new Comparator<SymbolData>() {
+                @Override
+                public int compare(SymbolData o1, SymbolData o2) {
+                    if (o1.getSymbol().endsWith("CE")) {
+                        return 1;
+                    } else {
+                        return -1;
+                    }
+                }
+            });
             log.info("Processed symbols. Oi change percent {}", configs.getOiPercent());
         } catch (Exception e) {
             log.error("Error in processing symbols at count {}", e, cnt);
         }
-        oiMap = new HashMap<>();
+
 
     }
 
@@ -137,7 +161,7 @@ public class OITrackScheduler {
 
         if (true) {
             LocalDateTime localDateTime = LocalDateTime.now();
-            boolean sendMail = localDateTime.getDayOfWeek().equals(DayOfWeek.THURSDAY) || localDateTime.getDayOfWeek().equals(DayOfWeek.TUESDAY);
+            boolean sendMail = true;
             //if (localDateTime.getDayOfWeek().equals(DayOfWeek.THURSDAY) || localDateTime.getDayOfWeek().equals(DayOfWeek.TUESDAY)) {
 
             LocalTime localStartTimeMarket = LocalTime.of(9, 41, 0);
@@ -148,37 +172,57 @@ public class OITrackScheduler {
             }
             Instant now = Instant.now();
             log.info("Track oi started");
-            log.info("Using index values nifty: {}, finnifty: {}", configs.getNiftyValue(), configs.getFinniftyValue());
 
             // fetch index values as NSE segment
 
 
-            // nifty
+            // index ltp
+            double niftyLtp = 0;
+            double finniftyLtp = 0;
+            try {
+                niftyLtp = getOi("26000", "NSE");
+                finniftyLtp = 0;
+                finniftyLtp = finniftyLtp + (getOi("1333", "NSE") * 36.5);
+                finniftyLtp = finniftyLtp + (getOi("4963", "NSE") * 20.2);
+                finniftyLtp = finniftyLtp + (getOi("4244", "NSE") * 0.74);
+                finniftyLtp = finniftyLtp + (getOi("1922", "NSE") * 7.7);
+                finniftyLtp = finniftyLtp + (getOi("5900", "NSE") * 8.46);
+                finniftyLtp = finniftyLtp + (getOi("3045", "NSE") * 6.8);
+                finniftyLtp = finniftyLtp + (getOi("16675", "NSE") * 2.8);
+                finniftyLtp = finniftyLtp / 80.0;
+                finniftyLtp = configs.getFinniftyValue();
+                log.info("Using rough index values nifty: {}, finnifty: {}", niftyLtp, finniftyLtp);
+
+            } catch (InterruptedException e) {
+                log.error("Error fetch index ltp", e);
+            }
             LocalDate expiryDateNifty = getExpiryDate(DayOfWeek.THURSDAY);
             LocalDate expiryDateFinNifty = getExpiryDate(DayOfWeek.TUESDAY);
             int oi;
-            int diff = 1000; // index value diff
-
-
+            int diff = 500; // index value diff
+            int finniftyDiff = 1500;
+            StringBuilder email = new StringBuilder();
             for (SymbolData symbolData : symbolDataList) {
                 try {
-                    if (symbolData.getName().equals("NIFTY") && expiryDateNifty.equals(symbolData.getExpiry()) && Math.abs(symbolData.getStrike() - configs.getNiftyValue()) <= diff) {
+                    if (symbolData.getName().equals("NIFTY") && expiryDateNifty.equals(symbolData.getExpiry()) && Math.abs(symbolData.getStrike() - niftyLtp) <= diff) {
                         oi = getOi(symbolData.getToken(), "NFO");
                         if (oi == -1) {
                             continue;
                         }
+
                         if (oiMap.containsKey(symbolData.getSymbol())) {
                             double changePercent;
                             if (oiMap.get(symbolData.getSymbol()) == 0) {
                                 changePercent = 0;
                             } else {
-                                changePercent = ((double) (oi - oiMap.get(symbolData.getSymbol())) / (double) oiMap.get(symbolData.getSymbol()))*100.0;
+                                changePercent = ((double) (oi - oiMap.get(symbolData.getSymbol())) / (double) oiMap.get(symbolData.getSymbol())) * 100.0;
                             }
-                            String response = String.format("Index: %s, Option: %s, current oi: %d, Change percent: %f Symbol: %s", "NIFTY", symbolData.getStrike() + " " +
-                                    symbolData.getSymbol().substring(symbolData.getSymbol().length() - 2), oi, changePercent, symbolData.getSymbol());
+                            String response = String.format("Index: %s, Option: %s, current oi: %d, Change: %d Change percent: %f Symbol: %s", "NIFTY", symbolData.getStrike() + " " +
+                                    symbolData.getSymbol().substring(symbolData.getSymbol().length() - 2), oi, oi - oiMap.get(symbolData.getSymbol()), changePercent, symbolData.getSymbol());
 
-                            if (Math.abs(changePercent) >= configs.getOiPercent() && sendMail) {
-                                sendMessage.sendMessage(response);
+                            if (Math.abs(changePercent) >= configs.getOiPercent() && oi > 500000 && LocalDate.now().getDayOfWeek().equals(DayOfWeek.THURSDAY)) {
+                                email.append(response);
+                                email.append("\n");
                             } else if ((Math.abs(changePercent) >= configs.getOiPercent())) {
                                 log.info("{} has change % above oi percent", symbolData.getSymbol());
                             }
@@ -192,7 +236,7 @@ public class OITrackScheduler {
                             log.info("OI Data | {}", response);
                         }
 
-                    } else if (symbolData.getName().equals("FINNIFTY") && expiryDateFinNifty.equals(symbolData.getExpiry()) && Math.abs(symbolData.getStrike() - configs.getFinniftyValue()) <= diff) {
+                    } else if (symbolData.getName().equals("FINNIFTY") && expiryDateFinNifty.equals(symbolData.getExpiry()) && Math.abs(symbolData.getStrike() - finniftyLtp) <= finniftyDiff) {
                         oi = getOi(symbolData.getToken(), "NFO");
 
                         if (oi == -1) {
@@ -203,13 +247,14 @@ public class OITrackScheduler {
                             if (oiMap.get(symbolData.getSymbol()) == 0) {
                                 changePercent = 0;
                             } else {
-                                changePercent = ((double) (oi - oiMap.get(symbolData.getSymbol())) / (double) oiMap.get(symbolData.getSymbol()))*100.0;
+                                changePercent = ((double) (oi - oiMap.get(symbolData.getSymbol())) / (double) oiMap.get(symbolData.getSymbol())) * 100.0;
                             }
-                            String response = String.format("Index: %s, Option: %s, current oi: %d, Change percent: %f Symbol: %s", "FINNIFTY", symbolData.getStrike() + " " +
-                                    symbolData.getSymbol().substring(symbolData.getSymbol().length() - 2), oi, changePercent, symbolData.getSymbol());
+                            String response = String.format("Index: %s, Option: %s, current oi: %d, Change: %d Change percent: %f Symbol: %s", "FINNIFTY", symbolData.getStrike() + " " +
+                                    symbolData.getSymbol().substring(symbolData.getSymbol().length() - 2), oi, oi - oiMap.get(symbolData.getSymbol()), changePercent, symbolData.getSymbol());
 
-                            if (Math.abs(changePercent) >= configs.getOiPercent() && sendMail) {
-                                sendMessage.sendMessage(response);
+                            if (Math.abs(changePercent) >= configs.getOiPercent() && oi > 500000 && LocalDate.now().getDayOfWeek().equals(DayOfWeek.TUESDAY)) {
+                                email.append(response);
+                                email.append("\n");
                             } else if ((Math.abs(changePercent) >= configs.getOiPercent())) {
                                 log.info("{} has change % above oi percent", symbolData.getSymbol());
                             }
@@ -226,6 +271,11 @@ public class OITrackScheduler {
                 } catch (Exception e) {
                     log.error("Error fetching oi after process {}", symbolData.getSymbol(), e);
                 }
+            }
+
+            if (email.length() > 0) {
+                log.info("Sending mail {}", email.toString());
+                sendMessage.sendMessage(email.toString());
             }
             log.info("Track oi finished in {} s", Instant.now().getEpochSecond() - now.getEpochSecond());
         } else {

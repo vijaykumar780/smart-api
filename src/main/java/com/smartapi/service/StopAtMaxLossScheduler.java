@@ -458,13 +458,15 @@ public class StopAtMaxLossScheduler {
 
             if (triggerPrice > 0.0) {
                 orderParams.triggerprice = String.valueOf(roundOff(triggerPrice));
+                orderParams.variety = Constants.VARIETY_STOPLOSS;
+                orderParams.ordertype = Constants.ORDER_TYPE_STOPLOSS_LIMIT;
                 orderParams.price = roundOff(roundOff(triggerPrice)-0.5);
             } else {
                 orderParams.price = roundOff(sellPrice);
             }
         }
         try {
-            order = tradingSmartConnect.placeOrder(orderParams, Constants.VARIETY_NORMAL);
+            order = tradingSmartConnect.placeOrder(orderParams, orderParams.variety);
         } catch (Exception | SmartAPIException e) {
             order = null;
             log.error("Error in placing order for {}", tradeSymbol, e);
@@ -478,13 +480,13 @@ public class StopAtMaxLossScheduler {
                 log.error("Sleep exception");
             }
             try {
-                order = tradingSmartConnect.placeOrder(orderParams, Constants.VARIETY_NORMAL);
+                order = tradingSmartConnect.placeOrder(orderParams, orderParams.variety);
             } catch (Exception | SmartAPIException e) {
                 log.error("Error in placing order for {}", tradeSymbol, e);
             }
         }
         try {
-            Thread.sleep(250);
+            Thread.sleep(400);
         } catch (InterruptedException e) {
             log.error("Sleep exception");
         }

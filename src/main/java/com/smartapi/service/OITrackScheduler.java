@@ -441,28 +441,37 @@ public class OITrackScheduler {
                     sendMessage.sendMessage(opt);
                 }
             }
-            Order order = stopAtMaxLossScheduler.placeOrder(buySymbolData.getSymbol(), buySymbolData.getToken(), buyLtp, remainingQty, Constants.TRANSACTION_TYPE_BUY, 0.0);
-            if (order != null) {
-                opt = String.format("Buy order placed for %s, qty %d", buySymbolData.getSymbol(), maxQty);
-                log.info(opt);
-                sendMessage.sendMessage(opt);
-            } else {
-                opt = String.format("Buy order failed for %s, qty %d", buySymbolData.getSymbol(), maxQty);
-                log.info(opt);
-                sendMessage.sendMessage(opt);
+            if (remainingQty>0) {
+                Order order = stopAtMaxLossScheduler.placeOrder(buySymbolData.getSymbol(), buySymbolData.getToken(), buyLtp, remainingQty, Constants.TRANSACTION_TYPE_BUY, 0.0);
+                if (order != null) {
+                    opt = String.format("Buy order placed for %s, qty %d", buySymbolData.getSymbol(), maxQty);
+                    log.info(opt);
+                    sendMessage.sendMessage(opt);
+                } else {
+                    opt = String.format("Buy order failed for %s, qty %d", buySymbolData.getSymbol(), maxQty);
+                    log.info(opt);
+                    sendMessage.sendMessage(opt);
+                }
             }
 
             // initiate sell orders.
             Double sellLtp = getLtp(sellSymbolData.getToken());
-            Order sellOrder = stopAtMaxLossScheduler.placeOrder(sellSymbolData.getSymbol(), sellSymbolData.getToken(), sellLtp, maxQty, Constants.TRANSACTION_TYPE_SELL, 0.0);
-            if (sellOrder != null) {
-                opt = String.format("Sell order placed for %s, qty %d", sellSymbolData.getSymbol(), maxQty);
-                log.info(opt);
-                sendMessage.sendMessage(opt);
-            } else {
-                opt = String.format("Sell order failed for %s, qty %d", sellSymbolData.getSymbol(), maxQty);
-                log.info(opt);
-                sendMessage.sendMessage(opt);
+            Order sellOrder;
+            if (fullBatches>=1) {
+                sellOrder = stopAtMaxLossScheduler.placeOrder(sellSymbolData.getSymbol(), sellSymbolData.getToken(), sellLtp, maxQty, Constants.TRANSACTION_TYPE_SELL, 0.0);
+                if (sellOrder != null) {
+                    opt = String.format("Sell order placed for %s, qty %d", sellSymbolData.getSymbol(), maxQty);
+                    log.info(opt);
+                    sendMessage.sendMessage(opt);
+                } else {
+                    opt = String.format("Sell order failed for %s, qty %d", sellSymbolData.getSymbol(), maxQty);
+                    log.info(opt);
+                    sendMessage.sendMessage(opt);
+                }
+            }
+            fullBatches --;
+            if (remainingQty>0) {
+                fullBatches ++;
             }
 
             // initiate other sl orders with trigger price
@@ -481,15 +490,15 @@ public class OITrackScheduler {
             }
             Double triggerPrice = sellLtp - triggerPriceDiff;
             for (i = 0; i < fullBatches; i++) {
-                int sellqty = (i == fullBatches - 1) ? remainingQty : maxQty;
+                int sellqty = (i == (fullBatches - 1)) ? remainingQty : maxQty;
 
-                sellOrder = stopAtMaxLossScheduler.placeOrder(sellSymbolData.getSymbol(), sellSymbolData.getToken(), sellLtp, maxQty, Constants.TRANSACTION_TYPE_SELL, triggerPrice);
+                sellOrder = stopAtMaxLossScheduler.placeOrder(sellSymbolData.getSymbol(), sellSymbolData.getToken(), sellLtp, sellqty, Constants.TRANSACTION_TYPE_SELL, triggerPrice);
                 if (sellOrder != null) {
-                    opt = String.format("Sell order placed for %s, qty %d", sellSymbolData.getSymbol(), sellqty);
+                    opt = String.format("Sell order placed for %s, qty %d. Trigger price %f", sellSymbolData.getSymbol(), sellqty, triggerPrice);
                     log.info(opt);
                     sendMessage.sendMessage(opt);
                 } else {
-                    opt = String.format("Sell order failed for %s, qty %d", sellSymbolData.getSymbol(), sellqty);
+                    opt = String.format("Sell order failed for %s, qty %d. Trigger price %f", sellSymbolData.getSymbol(), sellqty, triggerPrice);
                     log.info(opt);
                     sendMessage.sendMessage(opt);
                 }

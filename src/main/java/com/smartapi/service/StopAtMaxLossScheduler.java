@@ -1,7 +1,6 @@
 package com.smartapi.service;
 
 import com.angelbroking.smartapi.SmartConnect;
-import com.angelbroking.smartapi.http.SmartAPIResponseHandler;
 import com.angelbroking.smartapi.http.exceptions.SmartAPIException;
 import com.angelbroking.smartapi.models.Order;
 import com.angelbroking.smartapi.models.OrderParams;
@@ -21,7 +20,6 @@ import org.springframework.stereotype.Service;
 import javax.annotation.PostConstruct;
 import java.time.LocalTime;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 
 import static java.time.temporal.ChronoUnit.SECONDS;
@@ -240,7 +238,7 @@ public class StopAtMaxLossScheduler {
                                         log.error("Error in placing order for {}", pos.optString("symboltoken"), e);
                                     }
                                 }
-                                Thread.sleep(500);
+                                Thread.sleep(250);
                                 log.info("Order placed to close pos {}", order);
                                 try {
                                     List<String> symbolsExitedFromScheduler = configs.getSymbolExitedFromScheduler();
@@ -274,7 +272,11 @@ public class StopAtMaxLossScheduler {
                                 sellOrderParams.producttype = pos.optString("producttype");
                                 sellOrderParams.duration = Constants.DURATION_DAY;
                                 sellOrderParams.transactiontype = Constants.TRANSACTION_TYPE_SELL;
-                                sellOrderParams.price = roundOff(Double.parseDouble(pos.optString("ltp")) - 2.00);
+                                Double sellPrice = Double.parseDouble(pos.optString("ltp")) - 2.00;
+                                if (sellPrice <= 1.0) {
+                                    sellPrice = 0.1;
+                                }
+                                sellOrderParams.price = roundOff(sellPrice);
                                 Order order = null;
                                 try {
                                     order = tradingSmartConnect.placeOrder(sellOrderParams, Constants.VARIETY_NORMAL);
@@ -297,7 +299,7 @@ public class StopAtMaxLossScheduler {
                                         log.error("Error in placing order for {}", pos.optString("symboltoken"), e);
                                     }
                                 }
-                                Thread.sleep(500);
+                                Thread.sleep(250);
                                 log.info("Order placed to close pos {}", order);
                             } else {
                                 break;
@@ -433,6 +435,61 @@ public class StopAtMaxLossScheduler {
         }
     }
 
+    public Order placeOrder(String tradeSymbol, String tradeToken, Double price, Integer qty, String transactionType, Double triggerPrice) {
+        Order order = null;
+
+        OrderParams orderParams = new OrderParams();
+        orderParams.variety = Constants.VARIETY_NORMAL;
+        orderParams.quantity = qty;
+        orderParams.symboltoken = tradeToken;
+        orderParams.exchange = "NFO";
+        orderParams.ordertype = Constants.ORDER_TYPE_LIMIT; //
+        orderParams.tradingsymbol = tradeSymbol;
+        orderParams.producttype =Constants.PRODUCT_INTRADAY;
+        orderParams.duration = Constants.DURATION_DAY;
+        orderParams.transactiontype = transactionType;
+        if (transactionType.equals(Constants.TRANSACTION_TYPE_BUY)) {
+            orderParams.price = roundOff(price + 5.00);
+        } else {
+            Double sellPrice = price - 2.00;
+            if (sellPrice <= 1.0) {
+                sellPrice = 0.1;
+            }
+
+            if (triggerPrice > 0.0) {
+                orderParams.triggerprice = String.valueOf(roundOff(triggerPrice));
+                orderParams.price = roundOff(roundOff(triggerPrice)-0.5);
+            } else {
+                orderParams.price = roundOff(sellPrice);
+            }
+        }
+        try {
+            order = tradingSmartConnect.placeOrder(orderParams, Constants.VARIETY_NORMAL);
+        } catch (Exception | SmartAPIException e) {
+            order = null;
+            log.error("Error in placing order for {}", tradeSymbol, e);
+        }
+        if (order == null) {
+            log.info("Buy order failed to processed, retrying");
+            init();
+            try {
+                Thread.sleep(350);
+            } catch (InterruptedException e) {
+                log.error("Sleep exception");
+            }
+            try {
+                order = tradingSmartConnect.placeOrder(orderParams, Constants.VARIETY_NORMAL);
+            } catch (Exception | SmartAPIException e) {
+                log.error("Error in placing order for {}", tradeSymbol, e);
+            }
+        }
+        try {
+            Thread.sleep(250);
+        } catch (InterruptedException e) {
+            log.error("Sleep exception");
+        }
+        return order;
+    }
 
     public Double roundOff(Double val) {
         return Math.round(val*10.0)/10.0;

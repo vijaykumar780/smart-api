@@ -1,5 +1,7 @@
 package com.smartapi.service;
 
+import com.angelbroking.smartapi.models.Order;
+import com.angelbroking.smartapi.utils.Constants;
 import com.smartapi.Configs;
 import com.smartapi.pojo.OiTrade;
 import com.smartapi.pojo.SymbolData;
@@ -15,7 +17,6 @@ import org.springframework.web.client.RestTemplate;
 
 import javax.annotation.PostConstruct;
 import java.time.*;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 @Log4j2
@@ -26,6 +27,9 @@ public class OITrackScheduler {
 
     @Autowired
     private SendMessage sendMessage;
+
+    @Autowired
+    private StopAtMaxLossScheduler stopAtMaxLossScheduler;
 
     private List<SymbolData> symbolDataList;
 
@@ -40,9 +44,12 @@ public class OITrackScheduler {
     double diffInitial = 7.0;
     double finalDiff = 13.0;
 
+    int ceCount = 0;
+    int peCount = 0;
     @PostConstruct
     public void init() {
         oiMap = new HashMap<>();
+        configs.setSymbolMap(new HashMap<>());
         configs.setOiTradeMap(new HashMap<>());
         configs.setOiBasedTradePlaced(false);
 
@@ -194,11 +201,17 @@ public class OITrackScheduler {
 
         int oi;
         int diff = 500; // index value diff
-        int finniftyDiff = 1500;
+        int finniftyDiff = 2000;
         StringBuilder email = new StringBuilder();
         for (SymbolData symbolData : symbolDataList) {
             try {
                 if (symbolData.getName().equals("NIFTY") && expiryDateNifty.equals(symbolData.getExpiry()) && Math.abs(symbolData.getStrike() - niftyLtp) <= diff) {
+                    String name = "";
+                    name = name + "NIFTY_";
+                    name = name + symbolData.getStrike() + "_" + (symbolData.getSymbol().endsWith("CE") ? "CE" : "PE");
+                    if (!configs.getSymbolMap().containsKey(name)) {
+                        configs.getSymbolMap().put(name, symbolData);
+                    }
                     oi = getOi(symbolData.getToken(), "NFO");
                     if (oi == -1) {
                         continue;
@@ -231,6 +244,12 @@ public class OITrackScheduler {
                     }
 
                 } else if (symbolData.getName().equals("FINNIFTY") && expiryDateFinNifty.equals(symbolData.getExpiry()) && Math.abs(symbolData.getStrike() - finniftyLtp) <= finniftyDiff) {
+                    String name = "";
+                    name = name + "FINNIFTY_";
+                    name = name + symbolData.getStrike() + "_" + (symbolData.getSymbol().endsWith("CE") ? "CE" : "PE");
+                    if (!configs.getSymbolMap().containsKey(name)) {
+                        configs.getSymbolMap().put(name, symbolData);
+                    }
                     oi = getOi(symbolData.getToken(), "NFO");
 
                     if (oi == -1) {
@@ -298,14 +317,16 @@ public class OITrackScheduler {
                             }
                             if (eligible || bigeligible) {
                                 if (diffPercent >= finalDiff && !configs.getOiBasedTradePlaced()) {
+                                    String tradeSymbol = newCeOi > newPeOi ? symbol : peSymbol;
                                     String opt = String.format("Symbol %s has Oi cross. OiDiff: %d. Sell option: %s",
-                                            symbol.replace("CE", ""), Math.abs(newCeOi - newPeOi), newCeOi > newPeOi ? symbol : peSymbol);
+                                            symbol.replace("CE", ""), Math.abs(newCeOi - newPeOi), tradeSymbol);
 
                                     if (LocalDate.now().getDayOfWeek().equals(DayOfWeek.TUESDAY)) {
                                         // finnifty only
                                         if (symbol.contains("FINNIFTY")) {
                                             log.info(opt);
                                             sendMessage.sendMessage(opt);
+                                            placeOrders(tradeSymbol);
                                         }
                                         // skip if of nifty
                                     } else if (LocalDate.now().getDayOfWeek().equals(DayOfWeek.THURSDAY)) {
@@ -313,10 +334,12 @@ public class OITrackScheduler {
                                         if (!symbol.contains("FINNIFTY")) { // nifty
                                             log.info(opt);
                                             sendMessage.sendMessage(opt);
+                                            placeOrders(tradeSymbol);
                                         }
                                     } else {
                                         log.info(opt);
                                         sendMessage.sendMessage(opt);
+                                        placeOrders(tradeSymbol);
                                     }
 
                                     // set trade placed
@@ -375,6 +398,158 @@ public class OITrackScheduler {
         log.info("Finished tracking oi based trade");
     }
 
+    private void placeOrders(String tradeSymbol) throws Exception {
+        String opt = "";
+        if (configs.isOiBasedTradeEnabled()) {
+            opt = "Oi based trade enabled. Initiating trade for " + tradeSymbol;
+            log.info(opt);
+            sendMessage.sendMessage(opt);
+            int qty = configs.getOiBasedTradeQty();
+            int maxQty = 1800;
+            int fullBatches = qty / maxQty;
+            int remainingQty = qty % maxQty;
+            int i;
+            String tradeToken = "";
+            Double price = 0.0;
+
+            SymbolData sellSymbolData = fetchSellSymbol(tradeSymbol);
+            int strikeDiff;
+            if (LocalDate.now().getDayOfWeek().equals(DayOfWeek.THURSDAY) ||
+                    LocalDate.now().getDayOfWeek().equals(DayOfWeek.TUESDAY)) {
+                strikeDiff = 100;
+            } else {
+                strikeDiff = 200;
+            }
+            SymbolData buySymbolData;
+            String indexName = tradeSymbol.startsWith("NIFTY") ? "NIFTY" : "FINNIFTY";
+            String optionType = tradeSymbol.endsWith("CE") ? "CE" : "PE";
+            int buyStrike = optionType.equals("CE") ? (sellSymbolData.getStrike() + strikeDiff) :
+                    (sellSymbolData.getStrike() - strikeDiff);
+            buySymbolData = configs.getSymbolMap().get(indexName + "_" + buyStrike + "_" + optionType);
+
+            // place full and remaining orders.
+            Double buyLtp = getLtp(buySymbolData.getToken());
+            for (i = 0; i < fullBatches; i++) {
+                Order order = stopAtMaxLossScheduler.placeOrder(buySymbolData.getSymbol(), buySymbolData.getToken(), buyLtp, maxQty, Constants.TRANSACTION_TYPE_BUY, 0.0);
+                if (order != null) {
+                    opt = String.format("Buy order placed for %s, qty %d", buySymbolData.getSymbol(), maxQty);
+                    log.info(opt);
+                    sendMessage.sendMessage(opt);
+                } else {
+                    opt = String.format("Buy order failed for %s, qty %d", buySymbolData.getSymbol(), maxQty);
+                    log.info(opt);
+                    sendMessage.sendMessage(opt);
+                }
+            }
+            Order order = stopAtMaxLossScheduler.placeOrder(buySymbolData.getSymbol(), buySymbolData.getToken(), buyLtp, remainingQty, Constants.TRANSACTION_TYPE_BUY, 0.0);
+            if (order != null) {
+                opt = String.format("Buy order placed for %s, qty %d", buySymbolData.getSymbol(), maxQty);
+                log.info(opt);
+                sendMessage.sendMessage(opt);
+            } else {
+                opt = String.format("Buy order failed for %s, qty %d", buySymbolData.getSymbol(), maxQty);
+                log.info(opt);
+                sendMessage.sendMessage(opt);
+            }
+
+            // initiate sell orders.
+            Double sellLtp = getLtp(sellSymbolData.getToken());
+            Order sellOrder = stopAtMaxLossScheduler.placeOrder(sellSymbolData.getSymbol(), sellSymbolData.getToken(), sellLtp, maxQty, Constants.TRANSACTION_TYPE_SELL, 0.0);
+            if (sellOrder != null) {
+                opt = String.format("Sell order placed for %s, qty %d", sellSymbolData.getSymbol(), maxQty);
+                log.info(opt);
+                sendMessage.sendMessage(opt);
+            } else {
+                opt = String.format("Sell order failed for %s, qty %d", sellSymbolData.getSymbol(), maxQty);
+                log.info(opt);
+                sendMessage.sendMessage(opt);
+            }
+
+            // initiate other sl orders with trigger price
+            // update config with trade placed
+            Double triggerPriceDiff = 0.0;
+            if (sellLtp >= 30.0) {
+                triggerPriceDiff = 3.0;
+            } else if (sellLtp >= 20.0) {
+                triggerPriceDiff = 2.5;
+            } else if (sellLtp >= 10) {
+                triggerPriceDiff = 2.0;
+            } else if (sellLtp >= 5) {
+                triggerPriceDiff = 1.2;
+            } else {
+                triggerPriceDiff = 1.0;
+            }
+            Double triggerPrice = sellLtp - triggerPriceDiff;
+            for (i = 0; i < fullBatches; i++) {
+                int sellqty = (i == fullBatches - 1) ? remainingQty : maxQty;
+
+                sellOrder = stopAtMaxLossScheduler.placeOrder(sellSymbolData.getSymbol(), sellSymbolData.getToken(), sellLtp, maxQty, Constants.TRANSACTION_TYPE_SELL, triggerPrice);
+                if (sellOrder != null) {
+                    opt = String.format("Sell order placed for %s, qty %d", sellSymbolData.getSymbol(), sellqty);
+                    log.info(opt);
+                    sendMessage.sendMessage(opt);
+                } else {
+                    opt = String.format("Sell order failed for %s, qty %d", sellSymbolData.getSymbol(), sellqty);
+                    log.info(opt);
+                    sendMessage.sendMessage(opt);
+                }
+                triggerPrice = triggerPrice - triggerPriceDiff;
+            }
+            configs.setOiBasedTradePlaced(true);
+        }
+    }
+
+    private SymbolData fetchSellSymbol(String tradeSymbol) {
+        try {
+
+            int i;
+            String indexName = tradeSymbol.startsWith("NIFTY") ? "NIFTY" : "FINNIFTY";
+            String optionType = tradeSymbol.endsWith("CE") ? "CE" : "PE";
+
+            SymbolData symbolData = getSymbolData(tradeSymbol);
+            int strike = symbolData.getStrike();
+            int step = 50;
+
+            Double ltpLimit;
+            if (LocalDate.now().getDayOfWeek().equals(DayOfWeek.THURSDAY) ||
+                    LocalDate.now().getDayOfWeek().equals(DayOfWeek.TUESDAY)) {
+                ltpLimit = 23.0;
+            } else {
+                ltpLimit = 40.0;
+            }
+
+
+            for (i = 0; i < 50; i++) {
+                Double ltp = getLtp(symbolData.getToken());
+                if (ltp <= ltpLimit) {
+                    return symbolData;
+                }
+                // find next symbol
+                if ("CE".equals(optionType)) {
+                    strike = strike + step;
+                } else {
+                    strike = strike - step;
+                }
+                symbolData = configs.getSymbolMap().get(indexName+"_"+ strike +"_"+optionType);
+            }
+        } catch (InterruptedException e) {
+            log.error("Error fetching sell symbol");
+        }
+        return null;
+    }
+
+    private SymbolData getSymbolData(String symbol) {
+        for (SymbolData symbolData : symbolDataList) {
+            if (symbol.equals(symbolData.getSymbol())) {
+                return symbolData;
+            }
+        }
+        return null;
+    }
+
+    public Double roundOff(Double val) {
+        return Math.round(val*10.0)/10.0;
+    }
 
     // every 5 mins
     //@Scheduled(fixedDelay = 300000)
@@ -554,6 +729,56 @@ public class OITrackScheduler {
                     } else {
                         return (int) oiData.optDouble("ltp");
                     }
+                } else {
+                    Thread.sleep(20);
+                }
+            } catch (Exception e) {
+                Thread.sleep(20);
+                //return -1;
+            }
+        }
+        log.error("Error fetching oi for token {}", token);
+        return -1;
+    }
+
+    private double getLtp(String token) throws InterruptedException {
+        String segment = "NFO";
+        for (int i = 0; i < 60; i++) {
+            try {
+                HttpHeaders httpHeaders = new HttpHeaders();
+                httpHeaders.add("Content-Type", "application/json");
+                httpHeaders.add("Accept", "*/*");
+                httpHeaders.add("Authorization", "Bearer " + configs.getTokenForMarketData());
+                httpHeaders.add("X-UserType", "USER");
+                httpHeaders.add("X-SourceID", "WEB");
+                httpHeaders.add("X-ClientLocalIP", "122.161.95.166");
+                httpHeaders.add("X-ClientPublicIP", "122.161.95.166");
+                httpHeaders.add("X-MACAddress", "122.161.95.166");
+                httpHeaders.add("X-PrivateKey", configs.getMarketPrivateKey());
+                // httpHeaders.add("Connection","keep-alive");
+                JSONObject jsonObject = new JSONObject("{\n" +
+                        "\"mode\": \"FULL\",\n" +
+                        "  \"exchangeTokens\": {\n" +
+                        "    \"" + segment + "\": [\n" +
+                        "      \"" + token + "\"\n" +
+                        "    ]\n" +
+                        "  }\n" +
+                        "}");
+                HttpEntity<String> httpEntity = new HttpEntity<>(jsonObject.toString(), httpHeaders);
+
+                ResponseEntity<String> responseEntity = restTemplate.exchange(marketDataUrl, HttpMethod.POST, httpEntity, String.class);
+                //log.info("oi {}", responseEntity.toString());
+                int startIndex = responseEntity.toString().indexOf("{");
+                int endEndex = responseEntity.toString().lastIndexOf("}");
+
+                JSONObject op = new JSONObject(responseEntity.toString().substring(startIndex, endEndex + 1));
+                if (op.optString("message").equals("SUCCESS")) {
+                    JSONObject data = op.optJSONObject("data");
+                    JSONArray fetched = data.optJSONArray("fetched");
+                    JSONObject oiData = fetched.optJSONObject(0);
+                    Thread.sleep(20);
+
+                    return oiData.optDouble("ltp");
                 } else {
                     Thread.sleep(20);
                 }

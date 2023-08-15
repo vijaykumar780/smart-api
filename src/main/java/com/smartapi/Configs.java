@@ -3,22 +3,14 @@ package com.smartapi;
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.auth.BasicAWSCredentials;
-import com.amazonaws.client.builder.AwsClientBuilder;
-import com.amazonaws.services.sns.AmazonSNS;
 import com.amazonaws.services.sns.AmazonSNSClient;
 import com.amazonaws.services.sns.AmazonSNSClientBuilder;
 import com.angelbroking.smartapi.SmartConnect;
 import com.angelbroking.smartapi.http.exceptions.SmartAPIException;
 import com.angelbroking.smartapi.models.User;
-import com.smartapi.pojo.Instrument;
-import com.smartapi.pojo.Instruments;
-import com.smartapi.pojo.OiTrade;
-import com.smartapi.pojo.PlacedOrders;
+import com.smartapi.pojo.*;
 import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.Response;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -31,9 +23,6 @@ import lombok.Getter;
 import org.springframework.context.annotation.PropertySources;
 import org.springframework.web.client.RestTemplate;
 
-import java.io.IOException;
-import java.net.InetAddress;
-import java.time.LocalDate;
 import java.util.*;
 
 @Configuration
@@ -95,6 +84,14 @@ public class Configs {
 
 	@Value("${oiChangePercent}")
 	private int oiPercent;
+
+	@Value("${oiBasedTradeEnabled}")
+	private boolean oiBasedTradeEnabled; // take trade on basis of oi
+
+	@Value("${oiBasedTradeQty}")
+	private int oiBasedTradeQty;
+
+	private Map<String, SymbolData> symbolMap;
 
 	private String tokenForMarketData;
 

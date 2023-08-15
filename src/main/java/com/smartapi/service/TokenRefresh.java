@@ -101,6 +101,7 @@ public class TokenRefresh {
         configs.setSymbolExitedFromScheduler(new ArrayList<>());
         configs.setOiTradeMap(new HashMap<>());
         configs.setOiBasedTradePlaced(false);
+        configs.setSymbolMap(new HashMap<>());
         log.info("Re inited email count threshold");
     }
 }

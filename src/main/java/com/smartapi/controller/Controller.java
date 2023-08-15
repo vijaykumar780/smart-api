@@ -63,6 +63,12 @@ public class Controller {
         configs.setOiPercent(oiPercent);
     }
 
+    @GetMapping("/updateOiTradePlacedFalse")
+    public void updateOiTradePlacedFalse() {
+        log.info("updated OiTradePlacedFalse");
+        configs.setOiBasedTradePlaced(false);
+    }
+
     @GetMapping("/getPassword")
     public String getPassword() {
         LocalTime localStartTime = LocalTime.of(9,14,59);

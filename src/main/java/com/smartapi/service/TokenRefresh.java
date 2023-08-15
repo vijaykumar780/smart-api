@@ -7,6 +7,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 
 @Service
 @Log4j2
@@ -98,6 +99,8 @@ public class TokenRefresh {
         sendMessage.sendMessage("Re init email count threshold and SymbolExitedFromScheduler" + ct);
         configs.setMaxLossEmailCount(ct);
         configs.setSymbolExitedFromScheduler(new ArrayList<>());
+        configs.setOiTradeMap(new HashMap<>());
+        configs.setOiBasedTradePlaced(false);
         log.info("Re inited email count threshold");
     }
 }

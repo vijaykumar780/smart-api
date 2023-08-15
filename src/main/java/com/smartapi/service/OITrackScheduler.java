@@ -1,6 +1,7 @@
 package com.smartapi.service;
 
 import com.smartapi.Configs;
+import com.smartapi.pojo.OiTrade;
 import com.smartapi.pojo.SymbolData;
 import lombok.extern.log4j.Log4j2;
 import org.json.JSONArray;
@@ -35,9 +36,16 @@ public class OITrackScheduler {
 
     private String marketDataUrl = "https://apiconnect.angelbroking.com/rest/secure/angelbroking/market/v1/quote/";
 
+    // oi based trade
+    double diffInitial = 7.0;
+    double finalDiff = 13.0;
+
     @PostConstruct
-    public void init () {
+    public void init() {
         oiMap = new HashMap<>();
+        configs.setOiTradeMap(new HashMap<>());
+        configs.setOiBasedTradePlaced(false);
+
         log.info("Initializing rest template");
         restTemplate = new RestTemplateBuilder().setConnectTimeout(Duration.ofSeconds(10))
                 .setReadTimeout(Duration.ofSeconds(10))
@@ -47,7 +55,7 @@ public class OITrackScheduler {
         HttpEntity<String> httpEntity = new HttpEntity<String>("ip");
         ResponseEntity<String> response;
         try {
-            response= restTemplate.exchange("https://margincalculator.angelbroking.com/OpenAPI_File/files/OpenAPIScripMaster.json",
+            response = restTemplate.exchange("https://margincalculator.angelbroking.com/OpenAPI_File/files/OpenAPIScripMaster.json",
                     HttpMethod.GET, httpEntity, String.class);
         } catch (Exception e) {
             response = restTemplate.exchange("https://margincalculator.angelbroking.com/OpenAPI_File/files/OpenAPIScripMaster.json",
@@ -57,15 +65,15 @@ public class OITrackScheduler {
         log.info("Fetched symbols");
         int startIndex = response.toString().indexOf("[");
         int endINdex = response.toString().indexOf(",[Server");
-        int cnt =0;
+        int cnt = 0;
         try {
             JSONArray jsonArray = new JSONArray(response.toString().substring(startIndex, endINdex));
 
             symbolDataList = new ArrayList<>();
-            for (int i=0;i<jsonArray.length();i++) {
+            for (int i = 0; i < jsonArray.length(); i++) {
                 JSONObject ob = jsonArray.getJSONObject(i);
-                if (ob.optString("expiry")==null || ob.optString("expiry").isEmpty()
-                || ob.optString("strike")==null || ob.optString("strike").isEmpty()) {
+                if (ob.optString("expiry") == null || ob.optString("expiry").isEmpty()
+                        || ob.optString("strike") == null || ob.optString("strike").isEmpty()) {
                     continue;
                 }
                 SymbolData symbolData = SymbolData.builder()
@@ -73,21 +81,21 @@ public class OITrackScheduler {
                         .token(ob.getString("token"))
                         .name(ob.getString("name"))
                         .expiry(getLocalDate(ob.getString("expiry")))
-                        .strike(((int) Double.parseDouble(ob.optString("strike")))/100)
+                        .strike(((int) Double.parseDouble(ob.optString("strike"))) / 100)
                         .build();
                 cnt++;
-                if (Arrays.asList("NIFTY","FINNIFTY").contains(symbolData.getName())
+                if (Arrays.asList("NIFTY", "FINNIFTY").contains(symbolData.getName())
                         && "NFO".equals(ob.optString("exch_seg"))) {
                     symbolDataList.add(symbolData);
                     if (!oiMap.containsKey(symbolData.getName())) {
-                        oiMap.put(symbolData.getSymbol(), 100);
+                        //oiMap.put(symbolData.getSymbol(), 100);
                     }
                 }
             }
             symbolDataList.sort(new Comparator<SymbolData>() {
                 @Override
                 public int compare(SymbolData o1, SymbolData o2) {
-                    if (o1.getStrike()<o2.getStrike()) {
+                    if (o1.getStrike() < o2.getStrike()) {
                         return -1;
                     } else {
                         return 1;
@@ -114,7 +122,7 @@ public class OITrackScheduler {
 
     private LocalDate getLocalDate(String expiry) {
         Month month = Month.DECEMBER;
-        String mon = expiry.substring(2,5);
+        String mon = expiry.substring(2, 5);
         if (mon.equals("JAN")) {
             month = Month.JANUARY;
         }
@@ -151,12 +159,225 @@ public class OITrackScheduler {
         if (mon.equals("DEC")) {
             month = Month.DECEMBER;
         }
-        return LocalDate.of(Integer.parseInt(expiry.substring(5)), month, Integer.valueOf(expiry.substring(0,2)));
+        return LocalDate.of(Integer.parseInt(expiry.substring(5)), month, Integer.valueOf(expiry.substring(0, 2)));
 
     }
 
+    @Scheduled(fixedDelay = 60000)
+    public void tradeOnBasisOfOi() {
+        /*
+        if total ce oi surpass total pe oi for some specific strike, then initiate a trade. sold option whose oi is larger after surpass
+        incident found on today, when 19600 pe oi surpassed 19600 ce oi and 19600 pe became 0 from 12 to 0.
+        similarly for 19650 strike.
+         */
+
+        LocalTime localStartTimeMarket = LocalTime.of(12, 40, 0);
+        LocalTime localEndTime = LocalTime.of(15, 10, 1);
+        LocalTime now1 = LocalTime.now();
+        if (!(now1.isAfter(localStartTimeMarket) && now1.isBefore(localEndTime))) {
+            return;
+        }
+
+        LocalDate expiryDateNifty = getExpiryDate(DayOfWeek.THURSDAY);
+        LocalDate expiryDateFinNifty = getExpiryDate(DayOfWeek.TUESDAY);
+        double niftyLtp = 0;
+        double finniftyLtp = 0;
+        try {
+            niftyLtp = getOi("26000", "NSE");
+            finniftyLtp = configs.getFinniftyValue();
+            log.info("Using rough index values nifty: {}, finnifty: {}. Nifty exp {}, fnnifty exp {}",
+                    niftyLtp, finniftyLtp, expiryDateNifty, expiryDateFinNifty);
+
+        } catch (InterruptedException e) {
+            log.error("Error fetch index ltp", e);
+        }
+
+        int oi;
+        int diff = 500; // index value diff
+        int finniftyDiff = 1500;
+        StringBuilder email = new StringBuilder();
+        for (SymbolData symbolData : symbolDataList) {
+            try {
+                if (symbolData.getName().equals("NIFTY") && expiryDateNifty.equals(symbolData.getExpiry()) && Math.abs(symbolData.getStrike() - niftyLtp) <= diff) {
+                    oi = getOi(symbolData.getToken(), "NFO");
+                    if (oi == -1) {
+                        continue;
+                    }
+
+                    if (oiMap.containsKey(symbolData.getSymbol())) {
+                        double changePercent;
+                        if (oiMap.get(symbolData.getSymbol()) == 0) {
+                            changePercent = 0;
+                        } else {
+                            changePercent = ((double) (oi - oiMap.get(symbolData.getSymbol())) / (double) oiMap.get(symbolData.getSymbol())) * 100.0;
+                        }
+                        String response = String.format("Index: %s, Option: %s, current oi: %d, Change: %d Change percent: %f Symbol: %s", "NIFTY", symbolData.getStrike() + " " +
+                                symbolData.getSymbol().substring(symbolData.getSymbol().length() - 2), oi, oi - oiMap.get(symbolData.getSymbol()), changePercent, symbolData.getSymbol());
+
+                        if (Math.abs(changePercent) >= configs.getOiPercent() && oi > 500000 && LocalDate.now().getDayOfWeek().equals(DayOfWeek.THURSDAY)) {
+                            email.append(response);
+                            email.append("\n");
+                        } else if ((Math.abs(changePercent) >= configs.getOiPercent())) {
+                            log.info("{} has change % above oi percent", symbolData.getSymbol());
+                        }
+                        oiMap.put(symbolData.getSymbol(), oi);
+                        log.info("OI Data | {}", response);
+                    } else {
+                        oiMap.put(symbolData.getSymbol(), oi);
+                        String response = String.format("Index: %s, Option: %s, current oi: %d, Symbol: %s", "NIFTY", symbolData.getStrike() + " " +
+                                symbolData.getSymbol().substring(symbolData.getSymbol().length() - 2), oi, symbolData.getSymbol());
+
+                        log.info("OI Data | {}", response);
+                    }
+
+                } else if (symbolData.getName().equals("FINNIFTY") && expiryDateFinNifty.equals(symbolData.getExpiry()) && Math.abs(symbolData.getStrike() - finniftyLtp) <= finniftyDiff) {
+                    oi = getOi(symbolData.getToken(), "NFO");
+
+                    if (oi == -1) {
+                        continue;
+                    }
+                    if (oiMap.containsKey(symbolData.getSymbol())) {
+                        double changePercent;
+                        if (oiMap.get(symbolData.getSymbol()) == 0) {
+                            changePercent = 0;
+                        } else {
+                            changePercent = ((double) (oi - oiMap.get(symbolData.getSymbol())) / (double) oiMap.get(symbolData.getSymbol())) * 100.0;
+                        }
+                        String response = String.format("Index: %s, Option: %s, current oi: %d, Change: %d Change percent: %f Symbol: %s", "FINNIFTY", symbolData.getStrike() + " " +
+                                symbolData.getSymbol().substring(symbolData.getSymbol().length() - 2), oi, oi - oiMap.get(symbolData.getSymbol()), changePercent, symbolData.getSymbol());
+
+                        if (Math.abs(changePercent) >= configs.getOiPercent() && oi > 500000 && LocalDate.now().getDayOfWeek().equals(DayOfWeek.TUESDAY)) {
+                            email.append(response);
+                            email.append("\n");
+                        } else if ((Math.abs(changePercent) >= configs.getOiPercent())) {
+                            log.info("{} has change % above oi percent", symbolData.getSymbol());
+                        }
+                        oiMap.put(symbolData.getSymbol(), oi);
+                        log.info("OI Data | {}", response);
+                    } else {
+                        oiMap.put(symbolData.getSymbol(), oi);
+                        String response = String.format("Index: %s, Option: %s, current oi: %d, Symbol: %s", "FINNIFTY", symbolData.getStrike() + " " +
+                                symbolData.getSymbol().substring(symbolData.getSymbol().length() - 2), oi, symbolData.getSymbol());
+
+                        log.info("OI Data | {}", response);
+                    }
+                }
+            } catch (Exception e) {
+                log.error("Error in fetching oi of symbol {}", symbolData.getSymbol(), e);
+            }
+        }
+        log.info("Oi Map");
+        for (Map.Entry<String, Integer> entry : oiMap.entrySet()) {
+            log.info("{} : {}", entry.getKey(), entry.getValue());
+        }
+        for (Map.Entry<String, Integer> entry : oiMap.entrySet()) {
+            try {
+                String symbol = entry.getKey();
+                if (symbol.contains("CE")) {
+                    String peSymbol = entry.getKey().replace("CE", "PE");
+                    if (configs.getOiTradeMap().containsKey(symbol)) {
+                        OiTrade oiTrade = configs.getOiTradeMap().get(symbol);
+                        int oldCeOi = oiTrade.getCeOi();
+                        int oldPeOi = oiTrade.getPeOi();
+                        int newCeOi = entry.getValue();
+                        int newPeOi = oiMap.get(peSymbol);
+                        if (newCeOi == oldCeOi && newPeOi == oldPeOi) {
+                            log.info("Old and new ce an pe oi are same for symbol {}", symbol);
+                        } else {
+                            boolean eligible = oiTrade.isEligible();
+                            double diffPercent = ((double) Math.abs(newCeOi - newPeOi) / (double) Math.min(newCeOi, newPeOi));
+                            diffPercent = diffPercent * 100.0;
+
+                            //Big cross over without initial diff
+                            boolean bigeligible = false;
+                            if (oldPeOi > oldCeOi && newCeOi > newPeOi) {
+                                bigeligible = true;
+                            }
+                            if (oldCeOi > oldPeOi && newPeOi > newCeOi) {
+                                bigeligible = true;
+                            }
+                            if (eligible || bigeligible) {
+                                if (diffPercent >= finalDiff && !configs.getOiBasedTradePlaced()) {
+                                    String opt = String.format("Symbol %s has Oi cross. OiDiff: %d. Sell option: %s",
+                                            symbol.replace("CE", ""), Math.abs(newCeOi - newPeOi), newCeOi > newPeOi ? symbol : peSymbol);
+
+                                    if (LocalDate.now().getDayOfWeek().equals(DayOfWeek.TUESDAY)) {
+                                        // finnifty only
+                                        if (symbol.contains("FINNIFTY")) {
+                                            log.info(opt);
+                                            sendMessage.sendMessage(opt);
+                                        }
+                                        // skip if of nifty
+                                    } else if (LocalDate.now().getDayOfWeek().equals(DayOfWeek.THURSDAY)) {
+                                        // nifty only
+                                        if (!symbol.contains("FINNIFTY")) { // nifty
+                                            log.info(opt);
+                                            sendMessage.sendMessage(opt);
+                                        }
+                                    } else {
+                                        log.info(opt);
+                                        sendMessage.sendMessage(opt);
+                                    }
+
+                                    // set trade placed
+                                    // configs.setOiBasedTradePlaced(true); Add code to sell option
+
+                                    // reset
+                                    configs.getOiTradeMap().put(symbol, OiTrade.builder().ceOi(newCeOi)
+                                            .peOi(newPeOi).eligible(false).build());
+                                }
+                                if (newCeOi > 0 && newPeOi > 0 && diffPercent < finalDiff) {
+                                    eligible = false;
+                                    if (diffPercent <= diffInitial) {
+                                        eligible = true;
+                                    }
+                                    configs.getOiTradeMap().put(symbol, OiTrade.builder().ceOi(newCeOi)
+                                            .peOi(newPeOi).eligible(eligible).build());
+                                }
+                            } else {
+                                if (newCeOi > 0 && newPeOi > 0) {
+                                    diffPercent = ((double) Math.abs(newCeOi - newPeOi) / (double) Math.min(newCeOi, newPeOi));
+                                    diffPercent = diffPercent * 100.0;
+
+                                    eligible = false;
+                                    if (diffPercent <= diffInitial) {
+                                        eligible = true;
+                                    }
+                                    configs.getOiTradeMap().put(symbol, OiTrade.builder().ceOi(newCeOi)
+                                            .peOi(newPeOi).eligible(eligible).build());
+                                }
+                            }
+                        }
+                    } else {
+                        int ceOi = entry.getValue();
+                        int peOi = oiMap.get(peSymbol);
+                        if (ceOi > 0 && peOi > 0) {
+                            double diffPercent = ((double) Math.abs(ceOi - peOi) / (double) Math.min(ceOi, peOi));
+                            diffPercent = diffPercent * 100.0;
+
+                            boolean eligible = false;
+                            if (diffPercent <= diffInitial) {
+                                eligible = true;
+                            }
+                            configs.getOiTradeMap().put(symbol, OiTrade.builder().ceOi(ceOi)
+                                    .peOi(peOi).eligible(eligible).build());
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                log.error("Error occurred in processing strike: {}", entry.getKey(), e);
+            }
+        }
+        log.info("Oi based trade Map");
+        for (Map.Entry<String, OiTrade> entry : configs.getOiTradeMap().entrySet()) {
+            log.info("{} : {}", entry.getKey(), entry.getValue());
+        }
+        log.info("Finished tracking oi based trade");
+    }
+
+
     // every 5 mins
-    @Scheduled(fixedDelay = 300000)
+    //@Scheduled(fixedDelay = 300000)
     public void TrackOi() {
 
         if (true) {
@@ -171,7 +392,7 @@ public class OITrackScheduler {
                 return;
             }
             Instant now = Instant.now();
-            log.info("Track oi started");
+            log.info("Track oi started with oiPercent {}", configs.getOiPercent());
 
             // fetch index values as NSE segment
 

@@ -1,6 +1,7 @@
 package com.smartapi.service;
 
 import com.angelbroking.smartapi.SmartConnect;
+import com.angelbroking.smartapi.http.SmartAPIResponseHandler;
 import com.angelbroking.smartapi.http.exceptions.SmartAPIException;
 import com.angelbroking.smartapi.models.Order;
 import com.angelbroking.smartapi.models.OrderParams;
@@ -151,7 +152,15 @@ public class StopAtMaxLossScheduler {
                 buyamount = buyamount + Double.parseDouble(pos.optString("buyamount"));
             }
         }
-        if ((mtm <= 0 && Math.abs(mtm) >= maxLossAmount) || exitALLFlag || isExitAllPosRequired || isExitRequiredForReTradeAtSl) {
+        boolean isTradeAllowed = true;
+        if (now.isBefore(LocalTime.of(12,45)) && mtm != 0.00) {
+            isTradeAllowed = false;
+            String opt = "Check manually if all trades close. Time now is not allowed. Trade after 12:45";
+            log.info(opt);
+            sendMail(opt);
+        }
+        if ((mtm <= 0 && Math.abs(mtm) >= maxLossAmount) || exitALLFlag ||
+                isExitAllPosRequired || isExitRequiredForReTradeAtSl || !isTradeAllowed) {
             log.info("Flags exitALLFlag {}, isExitAllPosRequired {}, isExitRequiredForReTradeAtSl {}", exitALLFlag, isExitAllPosRequired, isExitRequiredForReTradeAtSl);
             sendMail("[SL] Max MTM loss reached. Loss: " + mtm + " Threshold: " + maxLossAmount);
             log.info("Max MTM loss reached. Loss {}. maxLossAmount {}, starting to close all pos.", mtm, maxLossAmount);
@@ -209,18 +218,29 @@ public class StopAtMaxLossScheduler {
                                 buyOrderParams.duration = Constants.DURATION_DAY;
                                 buyOrderParams.transactiontype = Constants.TRANSACTION_TYPE_BUY;
                                 buyOrderParams.price = roundOff(Double.parseDouble(pos.optString("ltp")) + 10.00);
-                                Order order = tradingSmartConnect.placeOrder(buyOrderParams, Constants.VARIETY_NORMAL);
+                                Order order = null;
+                                try {
+                                    order = tradingSmartConnect.placeOrder(buyOrderParams, Constants.VARIETY_NORMAL);
+                                } catch (Exception | SmartAPIException e) {
+                                    order = null;
+                                    log.error("Error in placing order for {}", pos.optString("symboltoken"), e);
+                                }
+
                                 if (order == null) {
                                     log.info("Buy order failed to processed, retrying");
                                     init();
                                     try {
-                                        Thread.sleep(290);
+                                        Thread.sleep(350);
                                     } catch (InterruptedException e) {
                                         e.printStackTrace();
                                     }
-                                    order = tradingSmartConnect.placeOrder(buyOrderParams, Constants.VARIETY_NORMAL);
+                                    try {
+                                        order = tradingSmartConnect.placeOrder(buyOrderParams, Constants.VARIETY_NORMAL);
+                                    } catch (Exception | SmartAPIException e) {
+                                        log.error("Error in placing order for {}", pos.optString("symboltoken"), e);
+                                    }
                                 }
-                                Thread.sleep(290);
+                                Thread.sleep(500);
                                 log.info("Order placed to close pos {}", order);
                                 try {
                                     List<String> symbolsExitedFromScheduler = configs.getSymbolExitedFromScheduler();
@@ -255,19 +275,29 @@ public class StopAtMaxLossScheduler {
                                 sellOrderParams.duration = Constants.DURATION_DAY;
                                 sellOrderParams.transactiontype = Constants.TRANSACTION_TYPE_SELL;
                                 sellOrderParams.price = roundOff(Double.parseDouble(pos.optString("ltp")) - 2.00);
-                                Order order = tradingSmartConnect.placeOrder(sellOrderParams, Constants.VARIETY_NORMAL);
+                                Order order = null;
+                                try {
+                                    order = tradingSmartConnect.placeOrder(sellOrderParams, Constants.VARIETY_NORMAL);
+                                } catch (Exception | SmartAPIException e) {
+                                    order = null;
+                                    log.error("Error in placing order for {}", pos.optString("symboltoken"), e);
+                                }
 
                                 if (order == null) {
-                                    log.info("Buy order failed to processed, retrying");
+                                    log.info("Sell order failed to processed, retrying");
                                     init();
                                     try {
-                                        Thread.sleep(290);
+                                        Thread.sleep(350);
                                     } catch (InterruptedException e) {
                                         e.printStackTrace();
                                     }
-                                    order = tradingSmartConnect.placeOrder(sellOrderParams, Constants.VARIETY_NORMAL);
+                                    try {
+                                        order = tradingSmartConnect.placeOrder(sellOrderParams, Constants.VARIETY_NORMAL);
+                                    } catch (Exception | SmartAPIException e) {
+                                        log.error("Error in placing order for {}", pos.optString("symboltoken"), e);
+                                    }
                                 }
-                                Thread.sleep(290);
+                                Thread.sleep(500);
                                 log.info("Order placed to close pos {}", order);
                             } else {
                                 break;

@@ -12,6 +12,7 @@ import com.angelbroking.smartapi.http.exceptions.SmartAPIException;
 import com.angelbroking.smartapi.models.User;
 import com.smartapi.pojo.Instrument;
 import com.smartapi.pojo.Instruments;
+import com.smartapi.pojo.OiTrade;
 import com.smartapi.pojo.PlacedOrders;
 import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
@@ -104,6 +105,10 @@ public class Configs {
 	String historySmartConnectRefreshToken;
 
 	String niftyToken;
+
+	Map<String, OiTrade> oiTradeMap;
+
+	private Boolean oiBasedTradePlaced;
 
 	List<String> totps = new ArrayList<>();
 	private String password = "8080";

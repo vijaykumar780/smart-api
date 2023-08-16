@@ -315,6 +315,9 @@ public class OITrackScheduler {
                             if (oldCeOi > oldPeOi && newPeOi > newCeOi) {
                                 bigeligible = true;
                             }
+                            if (bigeligible) {
+                                log.info("Big eligible found true for symbol {}", symbol);
+                            }
                             if (eligible || bigeligible) {
                                 if (diffPercent >= finalDiff && !configs.getOiBasedTradePlaced()) {
                                     String tradeSymbol = newCeOi > newPeOi ? symbol : peSymbol;
@@ -346,14 +349,17 @@ public class OITrackScheduler {
                                     // configs.setOiBasedTradePlaced(true); Add code to sell option
 
                                     // reset
-                                    configs.getOiTradeMap().put(symbol, OiTrade.builder().ceOi(newCeOi)
+                                    log.info("Reset oi enabled to false after trade placed for {}", tradeSymbol);
+                                    configs.getOiTradeMap().put(tradeSymbol, OiTrade.builder().ceOi(newCeOi)
                                             .peOi(newPeOi).eligible(false).build());
                                 }
                                 if (newCeOi > 0 && newPeOi > 0 && diffPercent < finalDiff) {
-                                    eligible = false;
-                                    if (diffPercent <= diffInitial) {
+                                    if (eligible==true) {
+                                        eligible=true;
+                                    } else if (diffPercent <= diffInitial) {
                                         eligible = true;
                                     }
+                                    log.info("Oi updated for {} with enabled {}", symbol, eligible);
                                     configs.getOiTradeMap().put(symbol, OiTrade.builder().ceOi(newCeOi)
                                             .peOi(newPeOi).eligible(eligible).build());
                                 }
@@ -362,8 +368,9 @@ public class OITrackScheduler {
                                     diffPercent = ((double) Math.abs(newCeOi - newPeOi) / (double) Math.min(newCeOi, newPeOi));
                                     diffPercent = diffPercent * 100.0;
 
-                                    eligible = false;
-                                    if (diffPercent <= diffInitial) {
+                                    if (eligible==true) {
+                                        eligible=true;
+                                    } else if (diffPercent <= diffInitial) {
                                         eligible = true;
                                     }
                                     configs.getOiTradeMap().put(symbol, OiTrade.builder().ceOi(newCeOi)

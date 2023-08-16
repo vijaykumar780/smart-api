@@ -177,15 +177,8 @@ public class OITrackScheduler {
         incident found on today, when 19600 pe oi surpassed 19600 ce oi and 19600 pe became 0 from 12 to 0.
         similarly for 19650 strike.
          */
-
-        LocalTime localStartTimeMarket = LocalTime.of(12, 40, 0);
-        LocalTime localEndTime = LocalTime.of(15, 10, 1);
-        LocalTime now1 = LocalTime.now();
-        if (!(now1.isAfter(localStartTimeMarket) && now1.isBefore(localEndTime))) {
-            return;
-        }
         try {
-            log.info("Configs used currently");
+            log.info("Configs used currently for oi based trade");
             log.info("oiPercent: {}", configs.getOiPercent());
             log.info("oiBasedTradeEnabled: {}", configs.isOiBasedTradeEnabled());
             log.info("isExpiry {}, nonExpMaxLoss {}", isExpiry(), configs.getNonExpMaxLoss());
@@ -194,6 +187,12 @@ public class OITrackScheduler {
             log.info("oiBasedTradeQty [As per expiry] {}", isExpiry() ? configs.getOiBasedTradeQty() : configs.getOiBasedTradeQtyNonExp());
         } catch (Exception exception) {
 
+        }
+        LocalTime localStartTimeMarket = LocalTime.of(12, 40, 0);
+        LocalTime localEndTime = LocalTime.of(15, 10, 1);
+        LocalTime now1 = LocalTime.now();
+        if (!(now1.isAfter(localStartTimeMarket) && now1.isBefore(localEndTime))) {
+            return;
         }
 
         LocalDate expiryDateNifty = getExpiryDate(DayOfWeek.THURSDAY);
@@ -465,7 +464,7 @@ public class OITrackScheduler {
 
             int fullBatches = qty / maxQty;
             int remainingQty = qty % maxQty;
-
+            log.info("Trade Details: strikediff {}, p1 {}, p2 {}, qty {}", strikeDiff, p1, p2, qty);
             SymbolData buySymbolData;
             String indexName = tradeSymbol.startsWith("NIFTY") ? "NIFTY" : "FINNIFTY";
             String optionType = tradeSymbol.endsWith("CE") ? "CE" : "PE";
@@ -501,47 +500,56 @@ public class OITrackScheduler {
             }
 
             // initiate sell orders.
+            double lotSize;
+            if (indexName=="NIFTY") {
+                lotSize = configs.getNiftyLotSize();
 
-
-            q1 = (q1 * qty) / 100.0;
-            q2 = (q2 * qty) / 100.0;
+            } else {
+                lotSize = configs.getFinniftyLotSize();
+            }
+            q1 = ((q1 * qty) / 100.0)/lotSize;
+            q2 = ((q2 * qty) / 100.0)/lotSize;
             q3 = qty - ((int) q1 + (int) q2);
 
+            int intq1,intq2, intq3;
+            intq1 = (int) q1 * (int) lotSize;
+            intq2 = (int) q2 * (int) lotSize;
+            intq3 = qty - intq1 - intq2;
             Double sellLtp = getLtp(sellSymbolData.getToken());
             Double trg1 = sellLtp - (sellLtp * p1) / 100.0;
             Double trg2 = trg1 - (trg1 * p2) / 100.0;
-
+            log.info("Trade Details: intq1 {}, intq2 {}, intq3 {}, trg1 {}, trg2 {}",intq1, intq2, intq3, trg1, trg2);
             Order sellOrder;
-            sellOrder = stopAtMaxLossScheduler.placeOrder(sellSymbolData.getSymbol(), sellSymbolData.getToken(), sellLtp, (int) q1, Constants.TRANSACTION_TYPE_SELL, 0.0);
+            sellOrder = stopAtMaxLossScheduler.placeOrder(sellSymbolData.getSymbol(), sellSymbolData.getToken(), sellLtp, intq1, Constants.TRANSACTION_TYPE_SELL, 0.0);
             if (sellOrder != null) {
-                opt = String.format("Sell order placed for %s, qty %d", sellSymbolData.getSymbol(), maxQty);
+                opt = String.format("Sell order placed for %s, qty %d", sellSymbolData.getSymbol(), intq1);
                 log.info(opt);
                 sendMessage.sendMessage(opt);
             } else {
-                opt = String.format("Sell order failed for %s, qty %d", sellSymbolData.getSymbol(), maxQty);
+                opt = String.format("Sell order failed for %s, qty %d", sellSymbolData.getSymbol(), intq1);
                 log.info(opt);
                 sendMessage.sendMessage(opt);
             }
 
 
-            sellOrder = stopAtMaxLossScheduler.placeOrder(sellSymbolData.getSymbol(), sellSymbolData.getToken(), sellLtp, (int) q2, Constants.TRANSACTION_TYPE_SELL, trg1);
+            sellOrder = stopAtMaxLossScheduler.placeOrder(sellSymbolData.getSymbol(), sellSymbolData.getToken(), sellLtp, intq2, Constants.TRANSACTION_TYPE_SELL, trg1);
             if (sellOrder != null) {
-                opt = String.format("Sell order placed for %s, qty %d. Trigger price %f", sellSymbolData.getSymbol(), (int) q2, trg1);
+                opt = String.format("Sell order placed for %s, qty %d. Trigger price %f", sellSymbolData.getSymbol(), intq2, trg1);
                 log.info(opt);
                 sendMessage.sendMessage(opt);
             } else {
-                opt = String.format("Sell order failed for %s, qty %d. Trigger price %f", sellSymbolData.getSymbol(), (int) q2, trg1);
+                opt = String.format("Sell order failed for %s, qty %d. Trigger price %f", sellSymbolData.getSymbol(), intq2, trg1);
                 log.info(opt);
                 sendMessage.sendMessage(opt);
             }
 
-            sellOrder = stopAtMaxLossScheduler.placeOrder(sellSymbolData.getSymbol(), sellSymbolData.getToken(), sellLtp, (int) q3, Constants.TRANSACTION_TYPE_SELL, trg2);
+            sellOrder = stopAtMaxLossScheduler.placeOrder(sellSymbolData.getSymbol(), sellSymbolData.getToken(), sellLtp, intq3, Constants.TRANSACTION_TYPE_SELL, trg2);
             if (sellOrder != null) {
-                opt = String.format("Sell order placed for %s, qty %d. Trigger price %f", sellSymbolData.getSymbol(), (int) q3, trg2);
+                opt = String.format("Sell order placed for %s, qty %d. Trigger price %f", sellSymbolData.getSymbol(), intq3, trg2);
                 log.info(opt);
                 sendMessage.sendMessage(opt);
             } else {
-                opt = String.format("Sell order failed for %s, qty %d. Trigger price %f", sellSymbolData.getSymbol(), (int) q3, trg2);
+                opt = String.format("Sell order failed for %s, qty %d. Trigger price %f", sellSymbolData.getSymbol(), intq3, trg2);
                 log.info(opt);
                 sendMessage.sendMessage(opt);
             }
@@ -699,14 +707,14 @@ public class OITrackScheduler {
                     JSONObject data = op.optJSONObject("data");
                     JSONArray fetched = data.optJSONArray("fetched");
                     JSONObject oiData = fetched.optJSONObject(0);
-                    Thread.sleep(15);
+                    Thread.sleep(10);
 
                     return oiData.optDouble("ltp");
                 } else {
-                    Thread.sleep(15);
+                    Thread.sleep(10);
                 }
             } catch (Exception e) {
-                Thread.sleep(15);
+                Thread.sleep(10);
                 //return -1;
             }
         }

@@ -100,6 +100,12 @@ public class Configs {
 	@Value("${nonExpMaxProfit}")
 	private int nonExpMaxProfit;
 
+	@Value("${niftyLotSize}")
+	private int niftyLotSize;
+
+	@Value("${finniftyLotSize}")
+	private int finniftyLotSize;
+
 	private Map<String, SymbolData> symbolMap;
 
 	private String tokenForMarketData;

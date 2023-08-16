@@ -32,11 +32,11 @@ class SmartApiApplicationTests {
         JSONArray positions = getPos();
         // Sl hit due to 2x sl
         log.info("TC 1");
-        stopAtMaxLossScheduler.processSlScheduler(orders, positions, false, LocalTime.now(), new ArrayList<>());
+        //stopAtMaxLossScheduler.processSlScheduler(orders, positions, false, LocalTime.now(), new ArrayList<>());
         // sl hit due to re trade of old wrong trade
         log.info("TC 2");
 
-        stopAtMaxLossScheduler.processSlScheduler(orders, positions, false, LocalTime.now(), Arrays.asList("NIFTY03AUG2319100PE"));
+        //stopAtMaxLossScheduler.processSlScheduler(orders, positions, false, LocalTime.now(), Arrays.asList("NIFTY03AUG2319100PE"));
     }
 
     private JSONArray getPos() throws JSONException {

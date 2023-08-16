@@ -41,7 +41,7 @@ public class OITrackScheduler {
     private String marketDataUrl = "https://apiconnect.angelbroking.com/rest/secure/angelbroking/market/v1/quote/";
 
     // oi based trade
-    double diffInitial = 7.0;
+    double diffInitial = 6.0;
     double finalDiff = 13.0;
 
     int ceCount = 0;
@@ -184,6 +184,17 @@ public class OITrackScheduler {
         if (!(now1.isAfter(localStartTimeMarket) && now1.isBefore(localEndTime))) {
             return;
         }
+        try {
+            log.info("Configs used currently");
+            log.info("oiPercent: {}", configs.getOiPercent());
+            log.info("oiBasedTradeEnabled: {}", configs.isOiBasedTradeEnabled());
+            log.info("isExpiry {}, nonExpMaxLoss {}", isExpiry(), configs.getNonExpMaxLoss());
+            log.info("nonExpMaxProfit {}", configs.getNonExpMaxProfit());
+            log.info("oiBasedTradePlaced {}", configs.getOiBasedTradePlaced());
+            log.info("oiBasedTradeQty [As per expiry] {}", isExpiry() ? configs.getOiBasedTradeQty() : configs.getOiBasedTradeQtyNonExp());
+        } catch (Exception exception) {
+
+        }
 
         LocalDate expiryDateNifty = getExpiryDate(DayOfWeek.THURSDAY);
         LocalDate expiryDateFinNifty = getExpiryDate(DayOfWeek.TUESDAY);
@@ -200,7 +211,7 @@ public class OITrackScheduler {
         }
 
         int oi;
-        int diff = 500; // index value diff
+        int diff = 1000; // index value diff
         int finniftyDiff = 2000;
         StringBuilder email = new StringBuilder();
         for (SymbolData symbolData : symbolDataList) {
@@ -285,7 +296,7 @@ public class OITrackScheduler {
                 log.error("Error in fetching oi of symbol {}", symbolData.getSymbol(), e);
             }
         }
-        log.info("Oi Map");
+        log.info("Oi Map:");
         for (Map.Entry<String, Integer> entry : oiMap.entrySet()) {
             log.info("{} : {}", entry.getKey(), entry.getValue());
         }
@@ -319,17 +330,19 @@ public class OITrackScheduler {
                                 log.info("Big eligible found true for symbol {}", symbol);
                             }
                             if (eligible || bigeligible) {
-                                if (diffPercent >= finalDiff && !configs.getOiBasedTradePlaced()) {
+                                if (diffPercent >= finalDiff) {
                                     String tradeSymbol = newCeOi > newPeOi ? symbol : peSymbol;
                                     String opt = String.format("Symbol %s has Oi cross. OiDiff: %d. Sell option: %s",
                                             symbol.replace("CE", ""), Math.abs(newCeOi - newPeOi), tradeSymbol);
-
+                                    boolean traded = false;
                                     if (LocalDate.now().getDayOfWeek().equals(DayOfWeek.TUESDAY)) {
                                         // finnifty only
                                         if (symbol.contains("FINNIFTY")) {
                                             log.info(opt);
                                             sendMessage.sendMessage(opt);
+
                                             placeOrders(tradeSymbol);
+                                            traded = true;
                                         }
                                         // skip if of nifty
                                     } else if (LocalDate.now().getDayOfWeek().equals(DayOfWeek.THURSDAY)) {
@@ -338,11 +351,15 @@ public class OITrackScheduler {
                                             log.info(opt);
                                             sendMessage.sendMessage(opt);
                                             placeOrders(tradeSymbol);
+                                            traded = true;
                                         }
                                     } else {
-                                        log.info(opt);
-                                        sendMessage.sendMessage(opt);
-                                        placeOrders(tradeSymbol);
+                                        if (newCeOi + newPeOi >= 1500000) {
+                                            log.info(opt);
+                                            sendMessage.sendMessage(opt);
+                                            placeOrders(tradeSymbol);
+                                            traded = true;
+                                        }
                                     }
 
                                     // set trade placed
@@ -389,6 +406,7 @@ public class OITrackScheduler {
                             if (diffPercent <= diffInitial) {
                                 eligible = true;
                             }
+                            log.info("Symbol {} stored in map", symbol);
                             configs.getOiTradeMap().put(symbol, OiTrade.builder().ceOi(ceOi)
                                     .peOi(peOi).eligible(eligible).build());
                         }
@@ -405,28 +423,49 @@ public class OITrackScheduler {
         log.info("Finished tracking oi based trade");
     }
 
+    private boolean isExpiry() {
+        if (LocalDate.now().getDayOfWeek().equals(DayOfWeek.THURSDAY) ||
+                LocalDate.now().getDayOfWeek().equals(DayOfWeek.TUESDAY)) {
+            return true;
+        }
+        return false;
+    }
+
     private void placeOrders(String tradeSymbol) throws Exception {
         String opt = "";
-        if (configs.isOiBasedTradeEnabled()) {
+        if (configs.isOiBasedTradeEnabled() && !configs.getOiBasedTradePlaced()) {
             opt = "Oi based trade enabled. Initiating trade for " + tradeSymbol;
             log.info(opt);
             sendMessage.sendMessage(opt);
-            int qty = configs.getOiBasedTradeQty();
+            int qty;
             int maxQty = 1800;
-            int fullBatches = qty / maxQty;
-            int remainingQty = qty % maxQty;
+
             int i;
             String tradeToken = "";
             Double price = 0.0;
 
             SymbolData sellSymbolData = fetchSellSymbol(tradeSymbol);
             int strikeDiff;
-            if (LocalDate.now().getDayOfWeek().equals(DayOfWeek.THURSDAY) ||
-                    LocalDate.now().getDayOfWeek().equals(DayOfWeek.TUESDAY)) {
+            double p1, p2;
+            if (isExpiry()) {
                 strikeDiff = 100;
+                p1 = 20.0;
+                p2 = 15.0;
+                qty = configs.getOiBasedTradeQty();
             } else {
                 strikeDiff = 200;
+                p1 = 10.0;
+                p2 = 10.0;
+                qty = configs.getOiBasedTradeQtyNonExp();
             }
+            double q1, q2, q3;
+            q1 = 20.0;
+            q2 = 25.0;
+            q3 = 55.0;
+
+            int fullBatches = qty / maxQty;
+            int remainingQty = qty % maxQty;
+
             SymbolData buySymbolData;
             String indexName = tradeSymbol.startsWith("NIFTY") ? "NIFTY" : "FINNIFTY";
             String optionType = tradeSymbol.endsWith("CE") ? "CE" : "PE";
@@ -448,7 +487,7 @@ public class OITrackScheduler {
                     sendMessage.sendMessage(opt);
                 }
             }
-            if (remainingQty>0) {
+            if (remainingQty > 0) {
                 Order order = stopAtMaxLossScheduler.placeOrder(buySymbolData.getSymbol(), buySymbolData.getToken(), buyLtp, remainingQty, Constants.TRANSACTION_TYPE_BUY, 0.0);
                 if (order != null) {
                     opt = String.format("Buy order placed for %s, qty %d", buySymbolData.getSymbol(), maxQty);
@@ -462,56 +501,54 @@ public class OITrackScheduler {
             }
 
             // initiate sell orders.
+
+
+            q1 = (q1 * qty) / 100.0;
+            q2 = (q2 * qty) / 100.0;
+            q3 = qty - ((int) q1 + (int) q2);
+
             Double sellLtp = getLtp(sellSymbolData.getToken());
+            Double trg1 = sellLtp - (sellLtp * p1) / 100.0;
+            Double trg2 = trg1 - (trg1 * p2) / 100.0;
+
             Order sellOrder;
-            if (fullBatches>=1) {
-                sellOrder = stopAtMaxLossScheduler.placeOrder(sellSymbolData.getSymbol(), sellSymbolData.getToken(), sellLtp, maxQty, Constants.TRANSACTION_TYPE_SELL, 0.0);
-                if (sellOrder != null) {
-                    opt = String.format("Sell order placed for %s, qty %d", sellSymbolData.getSymbol(), maxQty);
-                    log.info(opt);
-                    sendMessage.sendMessage(opt);
-                } else {
-                    opt = String.format("Sell order failed for %s, qty %d", sellSymbolData.getSymbol(), maxQty);
-                    log.info(opt);
-                    sendMessage.sendMessage(opt);
-                }
-            }
-            fullBatches --;
-            if (remainingQty>0) {
-                fullBatches ++;
-            }
-
-            // initiate other sl orders with trigger price
-            // update config with trade placed
-            Double triggerPriceDiff = 0.0;
-            if (sellLtp >= 30.0) {
-                triggerPriceDiff = 3.0;
-            } else if (sellLtp >= 20.0) {
-                triggerPriceDiff = 2.5;
-            } else if (sellLtp >= 10) {
-                triggerPriceDiff = 2.0;
-            } else if (sellLtp >= 5) {
-                triggerPriceDiff = 1.2;
+            sellOrder = stopAtMaxLossScheduler.placeOrder(sellSymbolData.getSymbol(), sellSymbolData.getToken(), sellLtp, (int) q1, Constants.TRANSACTION_TYPE_SELL, 0.0);
+            if (sellOrder != null) {
+                opt = String.format("Sell order placed for %s, qty %d", sellSymbolData.getSymbol(), maxQty);
+                log.info(opt);
+                sendMessage.sendMessage(opt);
             } else {
-                triggerPriceDiff = 1.0;
+                opt = String.format("Sell order failed for %s, qty %d", sellSymbolData.getSymbol(), maxQty);
+                log.info(opt);
+                sendMessage.sendMessage(opt);
             }
-            Double triggerPrice = sellLtp - triggerPriceDiff;
-            for (i = 0; i < fullBatches; i++) {
-                int sellqty = (i == (fullBatches - 1)) ? remainingQty : maxQty;
 
-                sellOrder = stopAtMaxLossScheduler.placeOrder(sellSymbolData.getSymbol(), sellSymbolData.getToken(), sellLtp, sellqty, Constants.TRANSACTION_TYPE_SELL, triggerPrice);
-                if (sellOrder != null) {
-                    opt = String.format("Sell order placed for %s, qty %d. Trigger price %f", sellSymbolData.getSymbol(), sellqty, triggerPrice);
-                    log.info(opt);
-                    sendMessage.sendMessage(opt);
-                } else {
-                    opt = String.format("Sell order failed for %s, qty %d. Trigger price %f", sellSymbolData.getSymbol(), sellqty, triggerPrice);
-                    log.info(opt);
-                    sendMessage.sendMessage(opt);
-                }
-                triggerPrice = triggerPrice - triggerPriceDiff;
+
+            sellOrder = stopAtMaxLossScheduler.placeOrder(sellSymbolData.getSymbol(), sellSymbolData.getToken(), sellLtp, (int) q2, Constants.TRANSACTION_TYPE_SELL, trg1);
+            if (sellOrder != null) {
+                opt = String.format("Sell order placed for %s, qty %d. Trigger price %f", sellSymbolData.getSymbol(), (int) q2, trg1);
+                log.info(opt);
+                sendMessage.sendMessage(opt);
+            } else {
+                opt = String.format("Sell order failed for %s, qty %d. Trigger price %f", sellSymbolData.getSymbol(), (int) q2, trg1);
+                log.info(opt);
+                sendMessage.sendMessage(opt);
+            }
+
+            sellOrder = stopAtMaxLossScheduler.placeOrder(sellSymbolData.getSymbol(), sellSymbolData.getToken(), sellLtp, (int) q3, Constants.TRANSACTION_TYPE_SELL, trg2);
+            if (sellOrder != null) {
+                opt = String.format("Sell order placed for %s, qty %d. Trigger price %f", sellSymbolData.getSymbol(), (int) q3, trg2);
+                log.info(opt);
+                sendMessage.sendMessage(opt);
+            } else {
+                opt = String.format("Sell order failed for %s, qty %d. Trigger price %f", sellSymbolData.getSymbol(), (int) q3, trg2);
+                log.info(opt);
+                sendMessage.sendMessage(opt);
             }
             configs.setOiBasedTradePlaced(true);
+        } else {
+            log.info("Trade found but oi based trade not enabled or trade already placed.");
+            sendMessage.sendMessage("Trade found but oi based trade not enabled or trade already placed.");
         }
     }
 
@@ -527,13 +564,11 @@ public class OITrackScheduler {
             int step = 50;
 
             Double ltpLimit;
-            if (LocalDate.now().getDayOfWeek().equals(DayOfWeek.THURSDAY) ||
-                    LocalDate.now().getDayOfWeek().equals(DayOfWeek.TUESDAY)) {
-                ltpLimit = 23.0;
+            if (isExpiry()) {
+                ltpLimit = 22.0;
             } else {
-                ltpLimit = 40.0;
+                ltpLimit = 30.0;
             }
-
 
             for (i = 0; i < 50; i++) {
                 Double ltp = getLtp(symbolData.getToken());
@@ -566,6 +601,121 @@ public class OITrackScheduler {
     public Double roundOff(Double val) {
         return Math.round(val*10.0)/10.0;
     }
+
+    private LocalDate getExpiryDate(DayOfWeek day) {
+        LocalDate localDate = LocalDate.now();
+        while (true) {
+            if (localDate.getDayOfWeek().equals(day)) {
+                return localDate;
+            }
+            localDate = localDate.plusDays(1);
+        }
+    }
+
+    private int getOi(String token, String segment) throws InterruptedException {
+        for (int i=0;i<100;i++) {
+            try {
+                HttpHeaders httpHeaders = new HttpHeaders();
+                httpHeaders.add("Content-Type", "application/json");
+                httpHeaders.add("Accept", "*/*");
+                httpHeaders.add("Authorization", "Bearer " + configs.getTokenForMarketData());
+                httpHeaders.add("X-UserType", "USER");
+                httpHeaders.add("X-SourceID", "WEB");
+                httpHeaders.add("X-ClientLocalIP", "122.161.95.166");
+                httpHeaders.add("X-ClientPublicIP", "122.161.95.166");
+                httpHeaders.add("X-MACAddress", "122.161.95.166");
+                httpHeaders.add("X-PrivateKey", configs.getMarketPrivateKey());
+                // httpHeaders.add("Connection","keep-alive");
+                JSONObject jsonObject = new JSONObject("{\n" +
+                        "\"mode\": \"FULL\",\n" +
+                        "  \"exchangeTokens\": {\n" +
+                        "    \"" + segment + "\": [\n" +
+                        "      \"" + token + "\"\n" +
+                        "    ]\n" +
+                        "  }\n" +
+                        "}");
+                HttpEntity<String> httpEntity = new HttpEntity<>(jsonObject.toString(), httpHeaders);
+
+                ResponseEntity<String> responseEntity = restTemplate.exchange(marketDataUrl, HttpMethod.POST, httpEntity, String.class);
+                //log.info("oi {}", responseEntity.toString());
+                int startIndex = responseEntity.toString().indexOf("{");
+                int endEndex = responseEntity.toString().lastIndexOf("}");
+
+                JSONObject op = new JSONObject(responseEntity.toString().substring(startIndex, endEndex + 1));
+                if (op.optString("message").equals("SUCCESS")) {
+                    JSONObject data = op.optJSONObject("data");
+                    JSONArray fetched = data.optJSONArray("fetched");
+                    JSONObject oiData = fetched.optJSONObject(0);
+                    Thread.sleep(15);
+                    if (segment.equals("NFO")) {
+                        return oiData.optInt("opnInterest");
+                    } else {
+                        return (int) oiData.optDouble("ltp");
+                    }
+                } else {
+                    Thread.sleep(15);
+                }
+            } catch (Exception e) {
+                Thread.sleep(15);
+                //return -1;
+            }
+        }
+        log.error("Error fetching oi for token {}", token);
+        return -1;
+    }
+
+    private double getLtp(String token) throws InterruptedException {
+        String segment = "NFO";
+        for (int i = 0; i < 100; i++) {
+            try {
+                HttpHeaders httpHeaders = new HttpHeaders();
+                httpHeaders.add("Content-Type", "application/json");
+                httpHeaders.add("Accept", "*/*");
+                httpHeaders.add("Authorization", "Bearer " + configs.getTokenForMarketData());
+                httpHeaders.add("X-UserType", "USER");
+                httpHeaders.add("X-SourceID", "WEB");
+                httpHeaders.add("X-ClientLocalIP", "122.161.95.166");
+                httpHeaders.add("X-ClientPublicIP", "122.161.95.166");
+                httpHeaders.add("X-MACAddress", "122.161.95.166");
+                httpHeaders.add("X-PrivateKey", configs.getMarketPrivateKey());
+                // httpHeaders.add("Connection","keep-alive");
+                JSONObject jsonObject = new JSONObject("{\n" +
+                        "\"mode\": \"FULL\",\n" +
+                        "  \"exchangeTokens\": {\n" +
+                        "    \"" + segment + "\": [\n" +
+                        "      \"" + token + "\"\n" +
+                        "    ]\n" +
+                        "  }\n" +
+                        "}");
+                HttpEntity<String> httpEntity = new HttpEntity<>(jsonObject.toString(), httpHeaders);
+
+                ResponseEntity<String> responseEntity = restTemplate.exchange(marketDataUrl, HttpMethod.POST, httpEntity, String.class);
+                //log.info("oi {}", responseEntity.toString());
+                int startIndex = responseEntity.toString().indexOf("{");
+                int endEndex = responseEntity.toString().lastIndexOf("}");
+
+                JSONObject op = new JSONObject(responseEntity.toString().substring(startIndex, endEndex + 1));
+                if (op.optString("message").equals("SUCCESS")) {
+                    JSONObject data = op.optJSONObject("data");
+                    JSONArray fetched = data.optJSONArray("fetched");
+                    JSONObject oiData = fetched.optJSONObject(0);
+                    Thread.sleep(15);
+
+                    return oiData.optDouble("ltp");
+                } else {
+                    Thread.sleep(15);
+                }
+            } catch (Exception e) {
+                Thread.sleep(15);
+                //return -1;
+            }
+        }
+        log.error("Error fetching oi for token {}", token);
+        return -1;
+    }
+
+
+
 
     // every 5 mins
     //@Scheduled(fixedDelay = 300000)
@@ -693,117 +843,5 @@ public class OITrackScheduler {
         } else {
             return;
         }
-    }
-
-    private LocalDate getExpiryDate(DayOfWeek day) {
-        LocalDate localDate = LocalDate.now();
-        while (true) {
-            if (localDate.getDayOfWeek().equals(day)) {
-                return localDate;
-            }
-            localDate = localDate.plusDays(1);
-        }
-    }
-
-    private int getOi(String token, String segment) throws InterruptedException {
-        for (int i=0;i<60;i++) {
-            try {
-                HttpHeaders httpHeaders = new HttpHeaders();
-                httpHeaders.add("Content-Type", "application/json");
-                httpHeaders.add("Accept", "*/*");
-                httpHeaders.add("Authorization", "Bearer " + configs.getTokenForMarketData());
-                httpHeaders.add("X-UserType", "USER");
-                httpHeaders.add("X-SourceID", "WEB");
-                httpHeaders.add("X-ClientLocalIP", "122.161.95.166");
-                httpHeaders.add("X-ClientPublicIP", "122.161.95.166");
-                httpHeaders.add("X-MACAddress", "122.161.95.166");
-                httpHeaders.add("X-PrivateKey", configs.getMarketPrivateKey());
-                // httpHeaders.add("Connection","keep-alive");
-                JSONObject jsonObject = new JSONObject("{\n" +
-                        "\"mode\": \"FULL\",\n" +
-                        "  \"exchangeTokens\": {\n" +
-                        "    \"" + segment + "\": [\n" +
-                        "      \"" + token + "\"\n" +
-                        "    ]\n" +
-                        "  }\n" +
-                        "}");
-                HttpEntity<String> httpEntity = new HttpEntity<>(jsonObject.toString(), httpHeaders);
-
-                ResponseEntity<String> responseEntity = restTemplate.exchange(marketDataUrl, HttpMethod.POST, httpEntity, String.class);
-                //log.info("oi {}", responseEntity.toString());
-                int startIndex = responseEntity.toString().indexOf("{");
-                int endEndex = responseEntity.toString().lastIndexOf("}");
-
-                JSONObject op = new JSONObject(responseEntity.toString().substring(startIndex, endEndex + 1));
-                if (op.optString("message").equals("SUCCESS")) {
-                    JSONObject data = op.optJSONObject("data");
-                    JSONArray fetched = data.optJSONArray("fetched");
-                    JSONObject oiData = fetched.optJSONObject(0);
-                    Thread.sleep(20);
-                    if (segment.equals("NFO")) {
-                        return oiData.optInt("opnInterest");
-                    } else {
-                        return (int) oiData.optDouble("ltp");
-                    }
-                } else {
-                    Thread.sleep(20);
-                }
-            } catch (Exception e) {
-                Thread.sleep(20);
-                //return -1;
-            }
-        }
-        log.error("Error fetching oi for token {}", token);
-        return -1;
-    }
-
-    private double getLtp(String token) throws InterruptedException {
-        String segment = "NFO";
-        for (int i = 0; i < 60; i++) {
-            try {
-                HttpHeaders httpHeaders = new HttpHeaders();
-                httpHeaders.add("Content-Type", "application/json");
-                httpHeaders.add("Accept", "*/*");
-                httpHeaders.add("Authorization", "Bearer " + configs.getTokenForMarketData());
-                httpHeaders.add("X-UserType", "USER");
-                httpHeaders.add("X-SourceID", "WEB");
-                httpHeaders.add("X-ClientLocalIP", "122.161.95.166");
-                httpHeaders.add("X-ClientPublicIP", "122.161.95.166");
-                httpHeaders.add("X-MACAddress", "122.161.95.166");
-                httpHeaders.add("X-PrivateKey", configs.getMarketPrivateKey());
-                // httpHeaders.add("Connection","keep-alive");
-                JSONObject jsonObject = new JSONObject("{\n" +
-                        "\"mode\": \"FULL\",\n" +
-                        "  \"exchangeTokens\": {\n" +
-                        "    \"" + segment + "\": [\n" +
-                        "      \"" + token + "\"\n" +
-                        "    ]\n" +
-                        "  }\n" +
-                        "}");
-                HttpEntity<String> httpEntity = new HttpEntity<>(jsonObject.toString(), httpHeaders);
-
-                ResponseEntity<String> responseEntity = restTemplate.exchange(marketDataUrl, HttpMethod.POST, httpEntity, String.class);
-                //log.info("oi {}", responseEntity.toString());
-                int startIndex = responseEntity.toString().indexOf("{");
-                int endEndex = responseEntity.toString().lastIndexOf("}");
-
-                JSONObject op = new JSONObject(responseEntity.toString().substring(startIndex, endEndex + 1));
-                if (op.optString("message").equals("SUCCESS")) {
-                    JSONObject data = op.optJSONObject("data");
-                    JSONArray fetched = data.optJSONArray("fetched");
-                    JSONObject oiData = fetched.optJSONObject(0);
-                    Thread.sleep(20);
-
-                    return oiData.optDouble("ltp");
-                } else {
-                    Thread.sleep(20);
-                }
-            } catch (Exception e) {
-                Thread.sleep(20);
-                //return -1;
-            }
-        }
-        log.error("Error fetching oi for token {}", token);
-        return -1;
     }
 }

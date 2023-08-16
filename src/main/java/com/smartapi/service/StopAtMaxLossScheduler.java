@@ -18,6 +18,8 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.PostConstruct;
+import java.time.DayOfWeek;
+import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -89,10 +91,10 @@ public class StopAtMaxLossScheduler {
         LocalTime localEndTimeMarket = LocalTime.of(15,30,1);
         LocalTime now = LocalTime.now();
         if (!(now.isAfter(localStartTimeMarket) && now.isBefore(localEndTime))) {
-            log.info("Current time {} is beyond range {} to {}. Threshold: {}", now, localStartTimeMarket, localEndTime, maxLossAmount);
+            log.info("Current time {} is beyond range {} to {}. Threshold: {} [As per exp / non exp]", now, localStartTimeMarket, localEndTime, isExpiry() ? maxLossAmount : configs.getNonExpMaxLoss());
             return;
         }
-        log.info("Starting Max loss tracker. Threshold: {} at time {}", maxLossAmount, now);
+        log.info("Starting Max loss tracker. Threshold: [As per exp or non exp] {} at time {}", isExpiry() ? maxLossAmount : configs.getNonExpMaxLoss(), now);
         if (historySmartConnect == null || tradingSmartConnect == null || marketSmartConnect ==null) {
             init();
         }
@@ -157,11 +159,21 @@ public class StopAtMaxLossScheduler {
             log.info(opt);
             sendMail(opt);
         }
-        if ((mtm <= 0 && Math.abs(mtm) >= maxLossAmount) || exitALLFlag ||
-                isExitAllPosRequired || isExitRequiredForReTradeAtSl || !isTradeAllowed) {
+        Double modifiedMaxLoss = (isExpiry() ? maxLossAmount : configs.getNonExpMaxLoss());
+        boolean nonExpMaxProfit = false;
+        if (!isExpiry() && mtm >=0.0 && mtm>= ((double)configs.getNonExpMaxProfit())) {
+            nonExpMaxProfit = true;
+        }
+        if ((mtm <= 0 && Math.abs(mtm) >= modifiedMaxLoss) || exitALLFlag ||
+                isExitAllPosRequired || isExitRequiredForReTradeAtSl || !isTradeAllowed || nonExpMaxProfit) {
             log.info("Flags exitALLFlag {}, isExitAllPosRequired {}, isExitRequiredForReTradeAtSl {}", exitALLFlag, isExitAllPosRequired, isExitRequiredForReTradeAtSl);
-            sendMail("[SL] Max MTM loss reached. Loss: " + mtm + " Threshold: " + maxLossAmount);
-            log.info("Max MTM loss reached. Loss {}. maxLossAmount {}, starting to close all pos.", mtm, maxLossAmount);
+            if (mtm>0.0) {
+                sendMail("[SL] Max Profit reached. Profit: " + mtm);
+                log.info("Max Profit reached. Profit {}, starting to close all pos.", mtm);
+            } else {
+                sendMail("[SL] Max MTM loss reached. Loss: " + mtm + " Threshold: " + modifiedMaxLoss);
+                log.info("Max MTM loss reached. Loss {}. maxLossAmount {}, starting to close all pos.", mtm, modifiedMaxLoss);
+            }
 
             if (ordersJsonArray == null || ordersJsonArray.length()==0) {
                 log.info("Orders array empty");
@@ -377,6 +389,14 @@ public class StopAtMaxLossScheduler {
                     }
                 }
             }
+        }
+        return false;
+    }
+
+    private boolean isExpiry() {
+        if (LocalDate.now().getDayOfWeek().equals(DayOfWeek.THURSDAY) ||
+                LocalDate.now().getDayOfWeek().equals(DayOfWeek.TUESDAY)) {
+            return true;
         }
         return false;
     }

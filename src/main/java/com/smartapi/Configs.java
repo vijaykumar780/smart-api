@@ -91,6 +91,15 @@ public class Configs {
 	@Value("${oiBasedTradeQty}")
 	private int oiBasedTradeQty;
 
+	@Value("${oiBasedTradeQtyNonExp}")
+	private int oiBasedTradeQtyNonExp;
+
+	@Value("${nonExpMaxLoss}")
+	private int nonExpMaxLoss;
+
+	@Value("${nonExpMaxProfit}")
+	private int nonExpMaxProfit;
+
 	private Map<String, SymbolData> symbolMap;
 
 	private String tokenForMarketData;

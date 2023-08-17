@@ -33,3 +33,4 @@ build/
 .vscode/
 ./Tradelogs.log/
 *.gz
+*.log

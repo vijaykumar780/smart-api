@@ -106,6 +106,14 @@ public class Configs {
 	@Value("${finniftyLotSize}")
 	private int finniftyLotSize;
 
+	@Value("${midcapNiftyLotSize}")
+	private int midcapNiftyLotSize;
+
+	@Value("${oiBasedTradeMidcapQty}")
+	private int oiBasedTradeMidcapQty;
+
+	private List<SymbolData> symbolDataList;
+
 	private Map<String, SymbolData> symbolMap;
 
 	private String tokenForMarketData;
@@ -137,6 +145,7 @@ public class Configs {
 
 	private int niftyValue = 19000;
 	private int finniftyValue = 20000;
+	private int midcapNiftyValue = 8000;
 
 	//@Bean("tradingSmartConnect")
 	public SmartConnect TradingSmartConnect() throws Exception, SmartAPIException {

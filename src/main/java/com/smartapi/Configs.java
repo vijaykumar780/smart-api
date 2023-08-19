@@ -88,8 +88,11 @@ public class Configs {
 	@Value("${oiBasedTradeEnabled}")
 	private boolean oiBasedTradeEnabled; // take trade on basis of oi
 
-	@Value("${oiBasedTradeQty}")
-	private int oiBasedTradeQty;
+	@Value("${oiBasedTradeQtyNifty}")
+	private int oiBasedTradeQtyNifty;
+
+	@Value("${oiBasedTradeQtyFinNifty}")
+	private int oiBasedTradeQtyFinNifty;
 
 	@Value("${oiBasedTradeQtyNonExp}")
 	private int oiBasedTradeQtyNonExp;
@@ -111,6 +114,9 @@ public class Configs {
 
 	@Value("${oiBasedTradeMidcapQty}")
 	private int oiBasedTradeMidcapQty;
+
+	@Value("${maxLossAmount}")
+	private int maxLossAmount;
 
 	private List<SymbolData> symbolDataList;
 

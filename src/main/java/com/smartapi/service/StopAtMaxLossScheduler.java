@@ -160,12 +160,12 @@ public class StopAtMaxLossScheduler {
             //sendMail(opt);
         }
         Double modifiedMaxLoss = (isExpiry() ? maxLossAmount : configs.getNonExpMaxLoss());
-        boolean nonExpMaxProfit = false;
+        /*boolean nonExpMaxProfit = false;
         if (!isExpiry() && mtm >=0.0 && mtm>= ((double)configs.getNonExpMaxProfit())) {
             nonExpMaxProfit = true;
-        }
+        }*/
         if ((mtm <= 0 && Math.abs(mtm) >= modifiedMaxLoss) || exitALLFlag ||
-                isExitAllPosRequired || isExitRequiredForReTradeAtSl || !isTradeAllowed || nonExpMaxProfit) {
+                isExitAllPosRequired || !isTradeAllowed) {
             log.info("Flags exitALLFlag {}, isExitAllPosRequired {}, isExitRequiredForReTradeAtSl {}", exitALLFlag, isExitAllPosRequired, isExitRequiredForReTradeAtSl);
             if (mtm>0.0) {
                 sendMail("[SL] Max Profit reached. Profit: " + mtm);

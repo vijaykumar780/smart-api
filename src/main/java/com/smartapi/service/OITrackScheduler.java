@@ -59,10 +59,10 @@ public class OITrackScheduler {
             }
         }
         if (success==1) {
-            sendMessage.sendMessage("Data loaded of symbols");
+            sendMessage.sendMessage("Data loaded for symbols");
             log.info("Data loaded of symbols");
         } else {
-            sendMessage.sendMessage("Failed data loaded of symbols");
+            sendMessage.sendMessage("Failed data loaded for symbols");
             log.error("Failed data loaded of symbols");
         }
     }
@@ -145,7 +145,7 @@ public class OITrackScheduler {
                     }
                 }
             });
-            log.info("Processed symbols. Oi change percent {}", configs.getOiPercent());
+            log.info("Processed {} symbols. Oi change percent {}", symbolDataList.size(), configs.getOiPercent());
         } catch (Exception e) {
             log.error("Error in processing symbols at count {}", cnt, e);
         }
@@ -212,17 +212,19 @@ public class OITrackScheduler {
         today = today.substring(0,5) + today.substring(7);
         today = today.toUpperCase();
         try {
-            log.info("Configs used currently for oi based trade.oiPercent: {}, oiBasedTradeEnabled: {}, isExpiry {}, nonExpMaxLoss {}, nonExpMaxProfit {}, oiBasedTradePlaced {}, midcapQty {}, Today {}",
+            log.info("Configs used currently for oi based trade.oiPercent: {}, oiBasedTradeEnabled: {}, oiBasedTradePlaced {}, midcapQty {}, " +
+                            "Nifty qty {}, Finnifty Qty {}, Today {}, maxLoss Limit {}, symbolsLoaded {}",
                     configs.getOiPercent(),
                     configs.isOiBasedTradeEnabled(),
-                    isExpiry(), configs.getNonExpMaxLoss(),
-                    configs.getNonExpMaxProfit(),
                     configs.getOiBasedTradePlaced(),
                     configs.getOiBasedTradeMidcapQty(),
-                    today);
+                    configs.getOiBasedTradeQtyNifty(),
+                    configs.getOiBasedTradeQtyFinNifty(),
+                    today, configs.getMaxLossAmount(),
+                    configs.getSymbolDataList().size());
             } catch (Exception exception) {
-
         }
+        // Any change made to from and to time here, should also be made in stop loss scheduler
         LocalTime localStartTimeMarket = LocalTime.of(13, 15, 0);
         LocalTime localEndTime = LocalTime.of(15, 10, 1);
         LocalTime now1 = LocalTime.now();
@@ -569,7 +571,7 @@ public class OITrackScheduler {
             SymbolData sellSymbolData = fetchSellSymbol(tradeSymbol);
             int strikeDiff;
             //if (isExpiry()) {
-                strikeDiff = indexName.equals("MIDCPNIFTY") ? 50 : 100;
+            strikeDiff = indexName.equals("MIDCPNIFTY") ? 50 : 100; // used for buy order
             if (indexName.equals("MIDCPNIFTY")) {
                 qty = configs.getOiBasedTradeMidcapQty();
             } else if (indexName.equals("NIFTY")) {
@@ -601,7 +603,7 @@ public class OITrackScheduler {
             int fullBatches = qty / maxQty;
             int remainingQty = qty % maxQty;
             remainingQty = (remainingQty% (int)lotSize == 0) ? remainingQty : remainingQty- (remainingQty% (int)lotSize);
-            log.info("Trade Details: strikediff {}, p1 {}, p2 {}, qty {}", strikeDiff, p1, p2, qty);
+            log.info("Trade Details: strikediff {}, p1 {}, p2 {}, total qty {}", strikeDiff, p1, p2, qty);
             SymbolData buySymbolData;
 
             String optionType = tradeSymbol.endsWith("CE") ? "CE" : "PE";
@@ -640,7 +642,7 @@ public class OITrackScheduler {
 
             q1 = q1/lotSize;
             q2 = q2/lotSize;
-            log.info("Q1 {}, Q2 {}", q1, q2);
+            //log.info("Q1 {}, Q2 {}", q1, q2);
             int intq1,intq2, intq3;
             intq1 = (int) q1 * (int) lotSize;
             intq2 = (int) q2 * (int) lotSize;
@@ -696,6 +698,7 @@ public class OITrackScheduler {
         } else {
             log.info("Trade found but oi based trade not enabled or trade already placed. Check if manual trade required. Sell {}", tradeSymbol);
             sendMessage.sendMessage("Trade found but oi based trade not enabled or trade already placed. Check if manual trade required. Sell "+ tradeSymbol);
+            sendMessage.sendMessage("Sell symbol " + fetchSellSymbol(tradeSymbol));
         }
     }
     double loss2 = 67.0;
@@ -727,7 +730,7 @@ public class OITrackScheduler {
             part = part * (int) lotSize;
             qtys.add(part);
         }
-        log.info("Qty list for {}: {}", qty, qtys);
+        log.info("Qty list for qty {}: {}", qty, qtys);
         return qtys;
     }
 

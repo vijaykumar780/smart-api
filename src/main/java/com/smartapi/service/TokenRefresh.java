@@ -95,7 +95,7 @@ public class TokenRefresh {
 */
     @Scheduled(cron = "0 45 8 * * ?")
     public void reInitEmail() {
-        int ct = 50;
+        int ct = 200;
         sendMessage.sendMessage("Re init email count threshold and SymbolExitedFromScheduler" + ct);
         configs.setMaxLossEmailCount(ct);
         configs.setSymbolExitedFromScheduler(new ArrayList<>());

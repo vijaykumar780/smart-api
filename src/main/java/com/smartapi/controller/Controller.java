@@ -59,11 +59,11 @@ public class Controller {
                             @RequestParam (required = true) int finnifty,
                             @RequestParam (required = true) int midcapnifty,
                             @RequestParam (required = true) int oiPercent) {
-        log.info("updated config values");
         configs.setNiftyValue(nifty);
         configs.setFinniftyValue(finnifty);
         configs.setMidcapNiftyValue(midcapnifty);
         configs.setOiPercent(oiPercent);
+        log.info("Updated configs nifty {}, finnifty {}, midcapnifty {}, oipercent {}", nifty, finnifty, midcapnifty, oiPercent);
     }
 
     @GetMapping("/updateOiTradePlacedFalse")

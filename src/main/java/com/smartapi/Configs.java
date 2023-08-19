@@ -94,14 +94,8 @@ public class Configs {
 	@Value("${oiBasedTradeQtyFinNifty}")
 	private int oiBasedTradeQtyFinNifty;
 
-	@Value("${oiBasedTradeQtyNonExp}")
-	private int oiBasedTradeQtyNonExp;
-
-	@Value("${nonExpMaxLoss}")
-	private int nonExpMaxLoss;
-
-	@Value("${nonExpMaxProfit}")
-	private int nonExpMaxProfit;
+	@Value("${oiBasedTradeMidcapQty}")
+	private int oiBasedTradeMidcapQty;
 
 	@Value("${niftyLotSize}")
 	private int niftyLotSize;
@@ -111,9 +105,6 @@ public class Configs {
 
 	@Value("${midcapNiftyLotSize}")
 	private int midcapNiftyLotSize;
-
-	@Value("${oiBasedTradeMidcapQty}")
-	private int oiBasedTradeMidcapQty;
 
 	@Value("${maxLossAmount}")
 	private int maxLossAmount;

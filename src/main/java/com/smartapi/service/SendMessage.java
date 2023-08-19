@@ -48,7 +48,7 @@ public class SendMessage {
 			return;
 		}
 
-		log.info("Sending message: {}", message);
+		//log.info("Sending message: {}", message);
 		snsClient.publish(new PublishRequest("arn:aws:sns:ap-south-1:226716646987:sms", message));
 		log.info("Message sent");
 

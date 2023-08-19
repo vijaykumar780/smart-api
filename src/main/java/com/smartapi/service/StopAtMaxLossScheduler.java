@@ -58,7 +58,7 @@ public class StopAtMaxLossScheduler {
         GoogleAuthenticator gAuth = new GoogleAuthenticator();
         totp = String.valueOf(gAuth.getTotpPassword(configs.getTotp()));
 
-        log.info("Using totp {}", totp);
+        log.info("Initiating smart connects. Using totp {}", totp);
         for (int i = 0; i <= 5; i++) {
             try {
                 log.info("Re-initiating session");
@@ -91,10 +91,10 @@ public class StopAtMaxLossScheduler {
         LocalTime localEndTimeMarket = LocalTime.of(15,30,1);
         LocalTime now = LocalTime.now();
         if (!(now.isAfter(localStartTimeMarket) && now.isBefore(localEndTime))) {
-            log.info("Current time {} is beyond range {} to {}. Threshold: {} [As per exp / non exp]", now, localStartTimeMarket, localEndTime, isExpiry() ? maxLossAmount : configs.getNonExpMaxLoss());
+            log.info("Current time {} is beyond range {} to {}. Threshold: {} [As per exp / non exp]", now, localStartTimeMarket, localEndTime, maxLossAmount);
             return;
         }
-        log.info("Starting Max loss tracker. Threshold: [As per exp or non exp] {} at time {}", isExpiry() ? maxLossAmount : configs.getNonExpMaxLoss(), now);
+        log.info("Starting Max loss tracker. Threshold: [As per exp or non exp] {} at time {}", maxLossAmount, now);
         if (historySmartConnect == null || tradingSmartConnect == null || marketSmartConnect ==null) {
             init();
         }
@@ -159,7 +159,7 @@ public class StopAtMaxLossScheduler {
             log.info(opt);
             //sendMail(opt);
         }
-        Double modifiedMaxLoss = (isExpiry() ? maxLossAmount : configs.getNonExpMaxLoss());
+        Double modifiedMaxLoss = maxLossAmount;
         /*boolean nonExpMaxProfit = false;
         if (!isExpiry() && mtm >=0.0 && mtm>= ((double)configs.getNonExpMaxProfit())) {
             nonExpMaxProfit = true;
@@ -393,13 +393,13 @@ public class StopAtMaxLossScheduler {
         return false;
     }
 
-    private boolean isExpiry() {
+    /*private boolean isExpiry() {
         if (LocalDate.now().getDayOfWeek().equals(DayOfWeek.THURSDAY) ||
                 LocalDate.now().getDayOfWeek().equals(DayOfWeek.TUESDAY)) {
             return true;
         }
         return false;
-    }
+    }*/
 
     private boolean fetch2xSlOnPositions(JSONArray ordersJsonArray, JSONArray positionsJsonArray) {
         try {
@@ -434,9 +434,10 @@ public class StopAtMaxLossScheduler {
                 }
                 Double slPrice;
                 if (soldPrice < 5.0) {
-                    slPrice = 2 * soldPrice + 3;
+                    //slPrice = 2 * soldPrice + 3;
+                    slPrice = 13.0;
                 } else if (soldPrice >= 5.0 && soldPrice <= 10.0) {
-                    slPrice = 2 * soldPrice + 2;
+                    slPrice = 2 * soldPrice + 5;
                 } else {
                     slPrice = 2 * soldPrice;
                 }

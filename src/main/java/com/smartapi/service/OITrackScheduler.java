@@ -4,6 +4,7 @@ import com.angelbroking.smartapi.models.Order;
 import com.angelbroking.smartapi.utils.Constants;
 import com.smartapi.Configs;
 import com.smartapi.pojo.OiTrade;
+import com.smartapi.pojo.OptionData;
 import com.smartapi.pojo.SymbolData;
 import lombok.extern.log4j.Log4j2;
 import org.json.JSONArray;
@@ -19,6 +20,7 @@ import javax.annotation.PostConstruct;
 import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Log4j2
 @Service
@@ -226,7 +228,7 @@ public class OITrackScheduler {
         }
         // Any change made to from and to time here, should also be made in stop loss scheduler
         LocalTime localStartTimeMarket = LocalTime.of(13, 15, 0);
-        LocalTime localEndTime = LocalTime.of(15, 10, 1);
+        LocalTime localEndTime = LocalTime.of(15, 15, 1);
         LocalTime now1 = LocalTime.now();
         if (!(now1.isAfter(localStartTimeMarket) && now1.isBefore(localEndTime))) {
             return;
@@ -528,7 +530,35 @@ public class OITrackScheduler {
             if (entry.getKey().startsWith("MIDCP"))
                 log.info("{} : {}", entry.getKey(), entry.getValue());
         }
+        trackMaxOiMail(today);
         log.info("Finished tracking oi based trade");
+    }
+
+    private void trackMaxOiMail(String today) {
+        // If there is no oi based trade yet then send top 4 max oi strikes on expiry in descending order
+        // after 14:35 (This is to done if there is no oi cross over found)
+        LocalTime now = LocalTime.now();
+
+        if (now.isAfter(LocalTime.of(14, 31)) && now.isBefore(LocalTime.of(15, 20)) &&
+                !configs.getOiBasedTradePlaced()) {
+            List<OptionData> optionDataList = new ArrayList<>();
+            for (Map.Entry<String, Integer> entry : oiMap.entrySet()) {
+                if (entry.getValue() > 0 && entry.getKey().contains(today)) {
+                    optionDataList.add(OptionData.builder().symbol(entry.getKey()).oi(entry.getValue()).build());
+                }
+            }
+            List<OptionData> sortedOptData = optionDataList.stream().sorted((o1, o2) -> (o1.getOi() > o2.getOi() ? 1 : -1)).collect(Collectors.toList());
+            if (now.getMinute() % 5 == 0 && sortedOptData.size() >= 4) {
+                StringBuilder emailContent = new StringBuilder();
+                emailContent.append("Symbol, Oi\n");
+                emailContent.append(sortedOptData.get(0).getSymbol() + " : " + sortedOptData.get(0).getOi() + "\n");
+                emailContent.append(sortedOptData.get(1).getSymbol() + " : " + sortedOptData.get(1).getOi() + "\n");
+                emailContent.append(sortedOptData.get(2).getSymbol() + " : " + sortedOptData.get(2).getOi() + "\n");
+                emailContent.append(sortedOptData.get(3).getSymbol() + " : " + sortedOptData.get(3).getOi() + "\n");
+                log.info("Max oi data: {}", emailContent.toString());
+                sendMessage.sendMessage(emailContent.toString());
+            }
+        }
     }
 
     private int getOiTestData(String symbol) {

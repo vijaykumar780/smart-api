@@ -61,7 +61,7 @@ public class OITrackScheduler {
             }
         }
         if (success==1) {
-            sendMessage.sendMessage("Data loaded for symbols");
+            sendMessage.sendMessage("Data loaded for symbols "+ configs.getSymbolDataList().size());
             log.info("Data loaded of symbols");
         } else {
             sendMessage.sendMessage("Failed data loaded for symbols");
@@ -203,7 +203,7 @@ public class OITrackScheduler {
 
     }
 
-    @Scheduled(fixedDelay = 60000)
+    @Scheduled(cron = "0 * * * * *")
     public void tradeOnBasisOfOi() {
         /*
         if total ce oi surpass total pe oi for some specific strike, then initiate a trade. sold option whose oi is larger after surpass
@@ -252,7 +252,7 @@ public class OITrackScheduler {
         }
 
         int oi;
-        int diff = 1000; // index value diff
+        int diff = 600; // index value diff
         int finniftyDiff = 2000;
         int midcapDiff = 1500;
         StringBuilder email = new StringBuilder();
@@ -547,18 +547,26 @@ public class OITrackScheduler {
                     optionDataList.add(OptionData.builder().symbol(entry.getKey()).oi(entry.getValue()).build());
                 }
             }
-            List<OptionData> sortedOptData = optionDataList.stream().sorted((o1, o2) -> (o1.getOi() > o2.getOi() ? 1 : -1)).collect(Collectors.toList());
+            List<OptionData> sortedOptData = optionDataList.stream().sorted((o1, o2) -> (o1.getOi() > o2.getOi() ? -1 : 1)).collect(Collectors.toList());
             if (now.getMinute() % 5 == 0 && sortedOptData.size() >= 4) {
                 StringBuilder emailContent = new StringBuilder();
                 emailContent.append("Symbol, Oi\n");
-                emailContent.append(sortedOptData.get(0).getSymbol() + " : " + sortedOptData.get(0).getOi() + "\n");
-                emailContent.append(sortedOptData.get(1).getSymbol() + " : " + sortedOptData.get(1).getOi() + "\n");
-                emailContent.append(sortedOptData.get(2).getSymbol() + " : " + sortedOptData.get(2).getOi() + "\n");
-                emailContent.append(sortedOptData.get(3).getSymbol() + " : " + sortedOptData.get(3).getOi() + "\n");
+
+                emailContent.append(getOiContent(sortedOptData.get(0), today));
+                emailContent.append(getOiContent(sortedOptData.get(1), today));
+                emailContent.append(getOiContent(sortedOptData.get(2), today));
+                emailContent.append(getOiContent(sortedOptData.get(3), today));
+
                 log.info("Max oi data: {}", emailContent.toString());
                 sendMessage.sendMessage(emailContent.toString());
             }
         }
+    }
+
+    private String getOiContent(OptionData optionData, String today) {
+        int todayindex = optionData.getSymbol().indexOf(today);
+        return optionData.getSymbol().substring(0,todayindex) + " " + optionData.getSymbol()
+                .substring(todayindex+7) + " : " + optionData.getOi() + "\n";
     }
 
     private int getOiTestData(String symbol) {

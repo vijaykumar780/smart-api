@@ -109,7 +109,7 @@ public class StopAtMaxLossScheduler {
             log.error("Failed to fetch positions");
             return;
         }
-        log.info("Fetched positions {}", jsonObject.toString());
+
         JSONArray positionsJsonArray = jsonObject.optJSONArray("data");
         if (positionsJsonArray == null || positionsJsonArray.isEmpty()) {
             log.info("Empty positions, skipping");
@@ -124,7 +124,6 @@ public class StopAtMaxLossScheduler {
             orders = marketSmartConnect.getOrderHistory("v122968");
         }
 
-        log.info("Fetched Orders {}", orders.toString());
 
         JSONArray ordersJsonArray = orders.optJSONArray("data");
         processSlScheduler(ordersJsonArray, positionsJsonArray, exitALLFlag, now, configs.getSymbolExitedFromScheduler());
@@ -173,6 +172,12 @@ public class StopAtMaxLossScheduler {
             } else {
                 sendMail("[SL] Max MTM loss reached. Loss: " + mtm + " Threshold: " + modifiedMaxLoss);
                 log.info("Max MTM loss reached. Loss {}. maxLossAmount {}, starting to close all pos.", mtm, modifiedMaxLoss);
+            }
+            try {
+                log.info("Fetched orders {}", ordersJsonArray.toString());
+                log.info("Fetched positions {}", positionsJsonArray.toString());
+            } catch (Exception e) {
+
             }
 
             if (ordersJsonArray == null || ordersJsonArray.length()==0) {

@@ -592,7 +592,7 @@ public class OITrackScheduler {
     double p1 = 22.0;
     double p2 = 15.0;
 
-    private void placeOrders(String tradeSymbol) throws Exception {
+    public void placeOrders(String tradeSymbol) throws Exception {
         String opt = "";
         if (configs.isOiBasedTradeEnabled() && !configs.getOiBasedTradePlaced()) {
             opt = "Oi based trade enabled. Initiating trade for " + tradeSymbol;

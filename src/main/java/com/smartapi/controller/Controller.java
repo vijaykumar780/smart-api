@@ -2,17 +2,21 @@ package com.smartapi.controller;
 
 import com.smartapi.Configs;
 import com.smartapi.SmartApiApplication;
+import com.smartapi.service.OITrackScheduler;
 import com.smartapi.service.SendMessage;
 import com.smartapi.service.StopAtMaxLossScheduler;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
+import java.time.DayOfWeek;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.Date;
@@ -34,6 +38,28 @@ public class Controller {
 
     @Autowired
     Environment environment;
+
+    @Autowired
+    OITrackScheduler oiTrackScheduler;
+
+    @GetMapping("/triggerManualTrade")
+    public ResponseEntity<String > triggerManualTrade(@RequestParam(required = true) String symbol) {
+        try {
+            LocalTime now = LocalTime.now();
+            if (now.isAfter(LocalTime.of(14, 30)) && now.isBefore(LocalTime.of(17, 0))) {
+                log.info("Manual trade triggered for symbol {}", symbol);
+                oiTrackScheduler.placeOrders(symbol);
+                return new ResponseEntity<>("Manual trade placed for symbol " + symbol, HttpStatus.ACCEPTED);
+            } else {
+                log.info("Manual trade can not be triggered for symbol at this time {}", symbol);
+                return new ResponseEntity<>("Manual trade can not be placed at this time for symbol " + symbol + " .Try bw 14:30 to 17:00",
+                        HttpStatus.ACCEPTED);
+            }
+        } catch (Exception e) {
+            log.error("Error placing manual order for symbol {}", symbol, e);
+            return new ResponseEntity<>("Error placing manual order for symbol " + symbol, HttpStatus.BAD_REQUEST);
+        }
+    }
 
     @GetMapping("/servicecheck")
     public String serviceCheck() {
@@ -74,10 +100,13 @@ public class Controller {
 
     @GetMapping("/getPassword")
     public String getPassword() {
-        LocalTime localStartTime = LocalTime.of(9,14,59);
-        LocalTime localEndTime = LocalTime.of(15,30,1);
+        LocalTime localStartTime = LocalTime.of(9, 14, 55);
+        LocalTime localEndTime = LocalTime.of(15, 30, 1);
         LocalTime now = LocalTime.now();
-        if (now.isAfter(localStartTime) && now.isBefore(localEndTime)) {
+        if (LocalDateTime.now().getDayOfWeek().equals(DayOfWeek.SATURDAY) ||
+                LocalDateTime.now().getDayOfWeek().equals(DayOfWeek.SUNDAY)) {
+            return configs.getGmailPassword();
+        } else if (now.isAfter(localStartTime) && now.isBefore(localEndTime)) {
             log.info("Password can not be provided at this time");
             return "Password can not be provided at this time";
         } else {

@@ -7,6 +7,7 @@ import com.angelbroking.smartapi.models.OrderParams;
 import com.angelbroking.smartapi.models.User;
 import com.angelbroking.smartapi.utils.Constants;
 import com.smartapi.Configs;
+import com.smartapi.pojo.OiTrade;
 import com.smartapi.pojo.OrderData;
 import com.warrenstrange.googleauth.GoogleAuthenticator;
 import lombok.extern.log4j.Log4j2;
@@ -78,6 +79,13 @@ public class StopAtMaxLossScheduler {
         } else {
             log.info("Reinited success");
         }
+    }
+
+    @Scheduled(fixedDelay = 50000)
+    public void gc() {
+        System.gc();
+        log.info("GC, Total memory {}, Free memory {}, Max memory {}", Runtime.getRuntime().totalMemory()/1000000,
+                Runtime.getRuntime().freeMemory()/1000000, Runtime.getRuntime().maxMemory()/1000000);
     }
 
     @Scheduled(fixedDelay = 2000) // (fixedDelay = 150000)
@@ -447,13 +455,41 @@ public class StopAtMaxLossScheduler {
                     slPrice = 2 * soldPrice;
                 }
                 boolean slHitRequired = (ltp >= slPrice);
+
+                // if trade is placed on basis of oi crossover and after that oi reverse cross, exit trade
+                String mapKey = sellOptionSymbol.endsWith("CE") ? sellOptionSymbol
+                        : sellOptionSymbol.replace("PE", "CE");
+                boolean isCE = sellOptionSymbol.endsWith("CE");
+
+                OiTrade oiTrade = configs.getOiTradeMap().getOrDefault(mapKey, null);
+                boolean exitReqOnBasisOfOi = false;
+                int buffer = 20000;
+                if (oiTrade!=null) {
+                    int ceOi = oiTrade.getCeOi();
+                    int peOi = oiTrade.getPeOi();
+                    if (isCE) {
+                        if (peOi - ceOi >= buffer) {
+                            exitReqOnBasisOfOi = true;
+                        }
+                    } else {
+                        if (ceOi - peOi >= buffer) {
+                            exitReqOnBasisOfOi = true;
+                        }
+                    }
+                }
+                log.info("Is exitReqOnBasisOfOi: {}", exitReqOnBasisOfOi);
+
                 log.info("[2x sl check] Symbol: {}, soldPrice: {}, ltp: {}, Sl price: {}, sl Hit Required: {}", sellOptionSymbol, soldPrice, ltp, slPrice, slHitRequired);
                 if (slHitRequired) {
                     String slHitReq = String.format("Sl hit required for 2x sl. symbol %s, sl price %s. Will close all pos, check manually also", sellOptionSymbol, slPrice);
                     log.info(slHitReq);
                     sendMail(slHitReq);
+                } else if (exitReqOnBasisOfOi) {
+                    String slHitReq = String.format("EXIT required because reverse oi crossover. symbol %s. Will close all pos, check manually also", sellOptionSymbol);
+                    log.info(slHitReq);
+                    sendMail(slHitReq);
                 }
-                return slHitRequired;
+                return slHitRequired || exitReqOnBasisOfOi;
             }
         } catch (Exception e) {
             log.error("Error in checking 2x sl", e);

@@ -9,6 +9,7 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
+import org.springframework.mail.SimpleMailMessage;
 import org.springframework.stereotype.Service;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.web.client.RestTemplate;
@@ -31,6 +32,7 @@ public class SendMessage {
 	@Autowired
 	AmazonSNSClient snsClient;
 
+	int sns = 0;
 	public void sendMessage(String message) {
 		if (message != null && message.contains("Failed to")) {
 			// reinit session repeated errors
@@ -49,8 +51,23 @@ public class SendMessage {
 		}
 
 		//log.info("Sending message: {}", message);
-		snsClient.publish(new PublishRequest("arn:aws:sns:ap-south-1:801536992554:sms", message));
-		log.info("Message sent");
+		if (sns==1) {
+			snsClient.publish(new PublishRequest("arn:aws:sns:ap-south-1:801536992554:sms", message));
+			log.info("Message sent");
+		} else {
+			SimpleMailMessage msg = new SimpleMailMessage();
+			msg.setTo("vijaykumarvijay886@gmail.com");
+
+			msg.setSubject("Algo trade");
+			msg.setText(message);
+			msg.setFrom("vijaykumarvijay886@gmail.com");
+			try {
+				javaMailSender.send(msg);
+				log.info("Email sent");
+			} catch (Exception e) {
+				log.error("Error in sending mail ", e);
+			}
+		}
 
 		/*
 		HttpHeaders headers = new HttpHeaders();
@@ -68,18 +85,7 @@ public class SendMessage {
 		}
 
 
-		SimpleMailMessage msg = new SimpleMailMessage();
-		msg.setTo("vijaykumarvijay886@gmail.com");
 
-		msg.setSubject("Opt Trade, stop at max loss");
-		msg.setText(message);
-		msg.setFrom("vijaykumarvk5885@gmail.com");
-		try {
-			javaMailSender.send(msg);
-			log.info("Email sent");
-		} catch (Exception e) {
-			log.error("Error in sending mail ", e);
-		}
 
 		 */
 	}

@@ -232,7 +232,7 @@ public class OITrackScheduler {
         LocalTime localEndTime = LocalTime.of(15, 15, 1);
         LocalTime now1 = LocalTime.now();
         if (!(now1.isAfter(localStartTimeMarket) && now1.isBefore(localEndTime))) {
-            //return;
+            return;
         }
 
         LocalDate expiryDateNifty = getExpiryDate(DayOfWeek.THURSDAY); // use wednesday if holiday on exp

@@ -119,7 +119,7 @@ public class OITrackScheduler {
                         .strike(((int) Double.parseDouble(ob.optString("strike"))) / 100)
                         .build();
                 cnt++;
-                if (Arrays.asList("NIFTY", "FINNIFTY", "MIDCPNIFTY").contains(symbolData.getName())
+                if (Arrays.asList("NIFTY", "FINNIFTY", "MIDCPNIFTY", "BANKNIFTY").contains(symbolData.getName())
                         && "NFO".equals(ob.optString("exch_seg"))) {
                     symbolDataList.add(symbolData);
                     if (!oiMap.containsKey(symbolData.getName())) {
@@ -215,13 +215,14 @@ public class OITrackScheduler {
         today = today.toUpperCase();
         try {
             log.info("Configs used currently for oi based trade.oiPercent: {}, oiBasedTradeEnabled: {}, oiBasedTradePlaced {}, midcapQty {}, " +
-                            "Nifty qty {}, Finnifty Qty {}, Today {}, maxLoss Limit {}, symbolsLoaded {}",
+                            "Nifty qty {}, Finnifty Qty {}, Banknifty qty {}, Today {}, maxLoss Limit {}, symbolsLoaded {}",
                     configs.getOiPercent(),
                     configs.isOiBasedTradeEnabled(),
                     configs.getOiBasedTradePlaced(),
                     configs.getOiBasedTradeMidcapQty(),
                     configs.getOiBasedTradeQtyNifty(),
                     configs.getOiBasedTradeQtyFinNifty(),
+                    configs.getOiBasedTradeBankNiftyQty(),
                     today, configs.getMaxLossAmount(),
                     configs.getSymbolDataList().size());
             } catch (Exception exception) {
@@ -237,15 +238,21 @@ public class OITrackScheduler {
         LocalDate expiryDateNifty = getExpiryDate(DayOfWeek.THURSDAY); // use wednesday if holiday on exp
         LocalDate expiryDateFinNifty = getExpiryDate(DayOfWeek.TUESDAY); // if holiday then skip its monday exp as midcap there
         LocalDate expiryDateMidcapNifty = getExpiryDate(DayOfWeek.MONDAY); // use friday exp
+        LocalDate expiryDateBankNifty = getExpiryDate(DayOfWeek.WEDNESDAY);
+
         double niftyLtp = 0;
         double finniftyLtp = 0;
         double midcapLtp = 0;
+        double bankNiftyLtp = 0;
+
         try {
             niftyLtp = getOi("26000", "NSE");
+            bankNiftyLtp = getOi("26009", "NSE");
+
             finniftyLtp = configs.getFinniftyValue();
             midcapLtp = configs.getMidcapNiftyValue();
-            log.info("Using rough index values nifty: {}, finnifty: {}, midcapnifty {}. Nifty exp {}, fnnifty exp {}, midcap exp {}",
-                    niftyLtp, finniftyLtp, midcapLtp, expiryDateNifty, expiryDateFinNifty, expiryDateMidcapNifty);
+            log.info("Using rough index values nifty: {}, finnifty: {}, midcapnifty {}, BankNifty {}. Nifty exp {}, fnnifty exp {}, midcap exp {}, BankNifty exp {}",
+                    niftyLtp, finniftyLtp, midcapLtp, bankNiftyLtp, expiryDateNifty, expiryDateFinNifty, expiryDateMidcapNifty, expiryDateBankNifty);
 
         } catch (InterruptedException e) {
             log.error("Error fetch index ltp", e);
@@ -254,7 +261,9 @@ public class OITrackScheduler {
         int oi;
         int diff = 600; // index value diff
         int finniftyDiff = 2000;
-        int midcapDiff = 1500;
+        int midcapDiff = 1000;
+        int bankNiftyDiff = 1000;
+
         StringBuilder email = new StringBuilder();
         List<SymbolData> symbols = configs.getSymbolDataList();
         for (SymbolData symbolData : symbols) {
@@ -375,6 +384,44 @@ public class OITrackScheduler {
 
                         //log.info("OI Data | {}", response);
                     }
+                } else if (symbolData.getName().equals("BANKNIFTY") && expiryDateBankNifty.equals(symbolData.getExpiry()) && Math.abs(symbolData.getStrike() - bankNiftyLtp) <= bankNiftyDiff) {
+                    String name = "";
+                    name = name + "BANKNIFTY_";
+                    name = name + symbolData.getStrike() + "_" + (symbolData.getSymbol().endsWith("CE") ? "CE" : "PE");
+                    if (!configs.getSymbolMap().containsKey(name)) {
+                        configs.getSymbolMap().put(name, symbolData);
+                    }
+                    oi = getOi(symbolData.getToken(), "NFO");
+
+                    if (oi == -1) {
+                        continue;
+                    }
+
+                    if (oiMap.containsKey(symbolData.getSymbol())) {
+                        double changePercent;
+                        if (oiMap.get(symbolData.getSymbol()) == 0) {
+                            changePercent = 0;
+                        } else {
+                            changePercent = ((double) (oi - oiMap.get(symbolData.getSymbol())) / (double) oiMap.get(symbolData.getSymbol())) * 100.0;
+                        }
+                        String response = String.format("Index: %s, Option: %s, current oi: %d, Change: %d Change percent: %f Symbol: %s", "BANKNIFTY", symbolData.getStrike() + " " +
+                                symbolData.getSymbol().substring(symbolData.getSymbol().length() - 2), oi, oi - oiMap.get(symbolData.getSymbol()), changePercent, symbolData.getSymbol());
+
+                        if (Math.abs(changePercent) >= configs.getOiPercent() && oi > 500000 && LocalDate.now().getDayOfWeek().equals(DayOfWeek.THURSDAY)) {
+                            email.append(response);
+                            email.append("\n");
+                        } else if ((Math.abs(changePercent) >= configs.getOiPercent())) {
+                            log.info("{} has change % above oi percent. percent {}", symbolData.getSymbol(), changePercent);
+                        }
+                        oiMap.put(symbolData.getSymbol(), oi);
+                        //log.info("OI Data | {}", response);
+                    } else {
+                        oiMap.put(symbolData.getSymbol(), oi);
+                        String response = String.format("Index: %s, Option: %s, current oi: %d, Symbol: %s", "BANKNIFTY", symbolData.getStrike() + " " +
+                                symbolData.getSymbol().substring(symbolData.getSymbol().length() - 2), oi, symbolData.getSymbol());
+
+                        //log.info("OI Data | {}", response);
+                    }
 
                 }
             } catch (Exception e) {
@@ -437,7 +484,7 @@ public class OITrackScheduler {
                                             placeOrders(tradeSymbol);
                                             traded = true;
                                         }
-                                    } else  if (LocalDate.now().getDayOfWeek().equals(DayOfWeek.MONDAY)) {
+                                    } else if (LocalDate.now().getDayOfWeek().equals(DayOfWeek.MONDAY)) {
                                         // nifty only
                                         if (symbol.startsWith("MIDCPNIFTY")) { // MIDCPNIFTY
                                             log.info(opt);
@@ -446,8 +493,13 @@ public class OITrackScheduler {
                                             traded = true;
                                         }
                                     } else if (LocalDate.now().getDayOfWeek().equals(DayOfWeek.WEDNESDAY)) {
-                                        // nifty only
-                                        if (symbol.contains(today) && symbol.startsWith("NIFTY")) { // NIFTY
+                                        // check banknifty first and then nifty
+                                        if (symbol.contains(today) && symbol.startsWith("BANKNIFTY")) { // BANKNIFTY
+                                            log.info(opt);
+                                            sendMessage.sendMessage(opt);
+                                            placeOrders(tradeSymbol);
+                                            traded = true;
+                                        } else if (symbol.contains(today) && symbol.startsWith("NIFTY")) { // NIFTY
                                             log.info(opt);
                                             sendMessage.sendMessage(opt);
                                             placeOrders(tradeSymbol);
@@ -518,20 +570,56 @@ public class OITrackScheduler {
             }
         }
         log.info("Oi based trade Map");
-        for (Map.Entry<String, OiTrade> entry : configs.getOiTradeMap().entrySet()) {
-            if (entry.getKey().startsWith("NIFTY"))
-            log.info("{} : {}", entry.getKey(), entry.getValue());
-        }
-        for (Map.Entry<String, OiTrade> entry : configs.getOiTradeMap().entrySet()) {
-            if (entry.getKey().startsWith("FINNIFTY"))
-            log.info("{} : {}", entry.getKey(), entry.getValue());
-        }
-        for (Map.Entry<String, OiTrade> entry : configs.getOiTradeMap().entrySet()) {
-            if (entry.getKey().startsWith("MIDCP"))
-                log.info("{} : {}", entry.getKey(), entry.getValue());
-        }
+        printOiMap();
+
         trackMaxOiMail(today);
         log.info("Finished tracking oi based trade");
+        System.gc();
+    }
+
+    private void printOiMap() {
+        List<String> result = new ArrayList<>();
+        int j;
+        for (Map.Entry<String, OiTrade> entry : configs.getOiTradeMap().entrySet()) {
+            if (entry.getKey().startsWith("NIFTY")) {
+                result.add(entry.getKey());
+            }
+            result.sort(String::compareTo);
+            for (j=0;j<result.size();j++) {
+                log.info("{} : {}",result.get(j), configs.getOiTradeMap().get(result.get(j)));
+            }
+        }
+        result.clear();
+        for (Map.Entry<String, OiTrade> entry : configs.getOiTradeMap().entrySet()) {
+            if (entry.getKey().startsWith("FINNIFTY")) {
+                result.add(entry.getKey());
+            }
+            result.sort(String::compareTo);
+            for (j=0;j<result.size();j++) {
+                log.info("{} : {}",result.get(j), configs.getOiTradeMap().get(result.get(j)));
+            }
+        }
+        result.clear();
+        for (Map.Entry<String, OiTrade> entry : configs.getOiTradeMap().entrySet()) {
+            if (entry.getKey().startsWith("MIDCP")) {
+                result.add(entry.getKey());
+            }
+            result.sort(String::compareTo);
+            for (j=0;j<result.size();j++) {
+                log.info("{} : {}",result.get(j), configs.getOiTradeMap().get(result.get(j)));
+            }
+        }
+        result.clear();
+        for (Map.Entry<String, OiTrade> entry : configs.getOiTradeMap().entrySet()) {
+            if (entry.getKey().startsWith("BANKNIFTY")) {
+                result.add(entry.getKey());
+            }
+            result.sort(String::compareTo);
+            for (j=0;j<result.size();j++) {
+                log.info("{} : {}",result.get(j), configs.getOiTradeMap().get(result.get(j)));
+            }
+        }
+        result.clear();
     }
 
     private void trackMaxOiMail(String today) {
@@ -600,7 +688,14 @@ public class OITrackScheduler {
             sendMessage.sendMessage(opt);
             int qty;
             String indexName = getIndexName(tradeSymbol);
-            int maxQty = indexName.equals("MIDCPNIFTY") ? 5250 : 1800;
+            int maxQty = 500;
+            if (indexName.equals("MIDCPNIFTY")) {
+                maxQty = 4200;
+            } else if (indexName.equals("BANKNIFTY")) {
+                maxQty = 900;
+            } else {
+                maxQty = 1800;
+            }
 
             int i;
             String tradeToken = "";
@@ -608,12 +703,22 @@ public class OITrackScheduler {
 
             SymbolData sellSymbolData = fetchSellSymbol(tradeSymbol);
             int strikeDiff;
-            //if (isExpiry()) {
-            strikeDiff = indexName.equals("MIDCPNIFTY") ? 50 : 100; // used for buy order
+
+            strikeDiff = 100; // used for buy order
+            if (indexName.equals("MIDCPNIFTY")) {
+                strikeDiff = 50;
+            } else if (indexName.equals("BANKNIFTY")) {
+                strikeDiff = 300;
+            } else {
+                strikeDiff = 100;
+            }
+
             if (indexName.equals("MIDCPNIFTY")) {
                 qty = configs.getOiBasedTradeMidcapQty();
             } else if (indexName.equals("NIFTY")) {
                 qty = configs.getOiBasedTradeQtyNifty();
+            } else if (indexName.equals("BANKNIFTY")) {
+                qty = configs.getOiBasedTradeBankNiftyQty();
             } else {
                 qty = configs.getOiBasedTradeQtyFinNifty();
             }
@@ -633,15 +738,19 @@ public class OITrackScheduler {
             double lotSize;
             if (indexName.equals("MIDCPNIFTY")) {
                 lotSize = configs.getMidcapNiftyLotSize();
-            } else if (indexName.equals("NIFTY")){
+            } else if (indexName.equals("NIFTY")) {
                 lotSize = configs.getNiftyLotSize();
+            } else if (indexName.equals("BANKNIFTY")) {
+                lotSize = configs.getBankNiftyLotSize();
             } else {
                 lotSize = configs.getFinniftyLotSize();
             }
+            log.info("Max Qty {}. Index {}. Tradable Qty {}, LotSize {}", maxQty, indexName, qty, lotSize);
+
             int fullBatches = qty / maxQty;
             int remainingQty = qty % maxQty;
-            remainingQty = (remainingQty% (int)lotSize == 0) ? remainingQty : remainingQty- (remainingQty% (int)lotSize);
-            log.info("Trade Details: strikediff {}, p1 {}, p2 {}, total qty {}", strikeDiff, p1, p2, qty);
+            remainingQty = (remainingQty % (int) lotSize == 0) ? remainingQty : remainingQty - (remainingQty % (int) lotSize);
+            log.info("Trade Details: strikediff {}, price1 {}%, price2 {}%, total qty {}", strikeDiff, p1, p2, qty);
             SymbolData buySymbolData;
 
             String optionType = tradeSymbol.endsWith("CE") ? "CE" : "PE";
@@ -678,17 +787,17 @@ public class OITrackScheduler {
 
             // initiate sell orders.
 
-            q1 = q1/lotSize;
-            q2 = q2/lotSize;
+            q1 = q1 / lotSize;
+            q2 = q2 / lotSize;
             //log.info("Q1 {}, Q2 {}", q1, q2);
-            int intq1,intq2, intq3;
+            int intq1, intq2, intq3;
             intq1 = (int) q1 * (int) lotSize;
             intq2 = (int) q2 * (int) lotSize;
             intq3 = qty - intq1 - intq2;
 
             Double trg1 = sellLtp - (sellLtp * p1) / 100.0;
             Double trg2 = trg1 - (trg1 * p2) / 100.0;
-            log.info("Trade Details: intq1 {}, intq2 {}, intq3 {}, trg1 {}, trg2 {}",intq1, intq2, intq3, trg1, trg2);
+            log.info("Trade Details: intq1 {}, intq2 {}, intq3 {}, trg1 {}, trg2 {}", intq1, intq2, intq3, trg1, trg2);
             List<Integer> qtys1 = getQtyList(intq1, maxQty, lotSize);
             List<Integer> qtys2 = getQtyList(intq2, maxQty, lotSize);
             List<Integer> qtys3 = getQtyList(intq3, maxQty, lotSize);
@@ -735,10 +844,11 @@ public class OITrackScheduler {
             configs.setOiBasedTradePlaced(true);
         } else {
             log.info("Trade found but oi based trade not enabled or trade already placed. Check if manual trade required. Sell {}", tradeSymbol);
-            sendMessage.sendMessage("Trade found but oi based trade not enabled or trade already placed. Check if manual trade required. Sell "+ tradeSymbol);
+            sendMessage.sendMessage("Trade found but oi based trade not enabled or trade already placed. Check if manual trade required. Sell " + tradeSymbol);
             sendMessage.sendMessage("Sell symbol " + fetchSellSymbol(tradeSymbol));
         }
     }
+
     double loss2 = 67.0;
     double loss1 = 32.0;
 
@@ -781,6 +891,8 @@ public class OITrackScheduler {
             indexName = "FINNIFTY";
         } else if (tradeSymbol.startsWith("MIDCPNIFTY")) {
             indexName = "MIDCPNIFTY";
+        } else if (tradeSymbol.startsWith("BANKNIFTY")) {
+            indexName = "BANKNIFTY";
         }
         return indexName;
     }
@@ -794,14 +906,25 @@ public class OITrackScheduler {
 
             SymbolData symbolData = getSymbolData(tradeSymbol);
             int strike = symbolData.getStrike();
-            int step = indexName.equals("MIDCPNIFTY") ? 25 : 50;
+            int step = 0;
+            if (indexName.equals("MIDCPNIFTY")) {
+                step = 25;
+            } else if (indexName.equals("BANKNIFTY")) {
+                step = 100;
+            } else {
+                step = 50;
+            }
+            log.info("Step {}", step);
 
             Double ltpLimit;
             if (indexName.equals("MIDCPNIFTY")) {
                 ltpLimit = 10.0;
+            } else if (indexName.equals("BANKNIFTY")) {
+                ltpLimit = 35.0;
             } else {
                 ltpLimit = 22.0;
             }
+            log.info("Ltp limit {}", ltpLimit);
 
             for (i = 0; i < 50; i++) {
                 Double ltp = getLtp(symbolData.getToken());

@@ -97,6 +97,9 @@ public class Configs {
 	@Value("${oiBasedTradeMidcapQty}")
 	private int oiBasedTradeMidcapQty;
 
+	@Value("${oiBasedTradeBankNiftyQty}")
+	private int oiBasedTradeBankNiftyQty;
+
 	@Value("${niftyLotSize}")
 	private int niftyLotSize;
 
@@ -105,6 +108,9 @@ public class Configs {
 
 	@Value("${midcapNiftyLotSize}")
 	private int midcapNiftyLotSize;
+
+	@Value("${bankNiftyLotSize}")
+	private int bankNiftyLotSize;
 
 	@Value("${maxLossAmount}")
 	private int maxLossAmount;

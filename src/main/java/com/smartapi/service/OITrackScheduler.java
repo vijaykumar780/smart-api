@@ -232,7 +232,7 @@ public class OITrackScheduler {
         LocalTime localEndTime = LocalTime.of(15, 15, 1);
         LocalTime now1 = LocalTime.now();
         if (!(now1.isAfter(localStartTimeMarket) && now1.isBefore(localEndTime))) {
-            return;
+            //return;
         }
 
         LocalDate expiryDateNifty = getExpiryDate(DayOfWeek.THURSDAY); // use wednesday if holiday on exp
@@ -584,40 +584,43 @@ public class OITrackScheduler {
             if (entry.getKey().startsWith("NIFTY")) {
                 result.add(entry.getKey());
             }
-            result.sort(String::compareTo);
-            for (j=0;j<result.size();j++) {
-                log.info("{} : {}",result.get(j), configs.getOiTradeMap().get(result.get(j)));
-            }
+        }
+        result.sort(String::compareTo);
+        for (j=0;j<result.size();j++) {
+            log.info("{} : {}",result.get(j), configs.getOiTradeMap().get(result.get(j)));
         }
         result.clear();
+
         for (Map.Entry<String, OiTrade> entry : configs.getOiTradeMap().entrySet()) {
             if (entry.getKey().startsWith("FINNIFTY")) {
                 result.add(entry.getKey());
             }
-            result.sort(String::compareTo);
-            for (j=0;j<result.size();j++) {
-                log.info("{} : {}",result.get(j), configs.getOiTradeMap().get(result.get(j)));
-            }
+        }
+        result.sort(String::compareTo);
+        for (j=0;j<result.size();j++) {
+            log.info("{} : {}",result.get(j), configs.getOiTradeMap().get(result.get(j)));
         }
         result.clear();
+
         for (Map.Entry<String, OiTrade> entry : configs.getOiTradeMap().entrySet()) {
             if (entry.getKey().startsWith("MIDCP")) {
                 result.add(entry.getKey());
             }
-            result.sort(String::compareTo);
-            for (j=0;j<result.size();j++) {
-                log.info("{} : {}",result.get(j), configs.getOiTradeMap().get(result.get(j)));
-            }
+        }
+        result.sort(String::compareTo);
+        for (j=0;j<result.size();j++) {
+            log.info("{} : {}",result.get(j), configs.getOiTradeMap().get(result.get(j)));
         }
         result.clear();
+
         for (Map.Entry<String, OiTrade> entry : configs.getOiTradeMap().entrySet()) {
             if (entry.getKey().startsWith("BANKNIFTY")) {
                 result.add(entry.getKey());
             }
-            result.sort(String::compareTo);
-            for (j=0;j<result.size();j++) {
-                log.info("{} : {}",result.get(j), configs.getOiTradeMap().get(result.get(j)));
-            }
+        }
+        result.sort(String::compareTo);
+        for (j=0;j<result.size();j++) {
+            log.info("{} : {}",result.get(j), configs.getOiTradeMap().get(result.get(j)));
         }
         result.clear();
     }

@@ -802,6 +802,10 @@ public class OITrackScheduler {
             Double trg2 = trg1 - (trg1 * p2) / 100.0;
             log.info("Trade Details: intq1 {}, intq2 {}, intq3 {}, trg1 {}, trg2 {}", intq1, intq2, intq3, trg1, trg2);
             List<Integer> qtys1 = getQtyList(intq1, maxQty, lotSize);
+            if (intq1+intq2>qty) {
+                log.info("Adjusting Qty2");
+                intq2 = qty - intq1;
+            }
             List<Integer> qtys2 = getQtyList(intq2, maxQty, lotSize);
             List<Integer> qtys3 = getQtyList(intq3, maxQty, lotSize);
             Order sellOrder;
@@ -869,10 +873,17 @@ public class OITrackScheduler {
     }
 
     private List<Integer> getQtyList(int qty, int maxQty, double lotSize) {
+
         int i;
         int fullBatches = qty/maxQty;
         int partialQty = qty%maxQty;
         List<Integer> qtys = new ArrayList<>();
+        if (qty<0) {
+            log.info("Negative qty, use 0 qty");
+            qtys.add(0);
+            return qtys;
+        }
+
         for (i=0;i<fullBatches;i++) {
             qtys.add(maxQty);
         }

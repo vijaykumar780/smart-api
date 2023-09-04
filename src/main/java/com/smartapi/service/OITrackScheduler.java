@@ -204,7 +204,7 @@ public class OITrackScheduler {
     }
 
     @Scheduled(cron = "0 * * * * *")
-    public void tradeOnBasisOfOi() {
+    public void tradeOnBasisOfOi() throws Exception {
         /*
         if total ce oi surpass total pe oi for some specific strike, then initiate a trade. sold option whose oi is larger after surpass
         incident found on today, when 19600 pe oi surpassed 19600 ce oi and 19600 pe became 0 from 12 to 0.
@@ -625,10 +625,31 @@ public class OITrackScheduler {
         result.clear();
     }
 
-    private void trackMaxOiMail(String today) {
+    private void trackMaxOiMail(String today) throws Exception {
         // If there is no oi based trade yet then send top 4 max oi strikes on expiry in descending order
         // after 14:35 (This is to done if there is no oi cross over found)
         LocalTime now = LocalTime.now();
+        int maxOi = 0;
+        String symbol = "";
+        if (now.isAfter(LocalTime.of(14, 32))) {
+            for (Map.Entry<String, OiTrade> entry : configs.getOiTradeMap().entrySet()) {
+                if (entry.getKey().contains(today)) { // expiry
+                    int oi = entry.getValue().getCeOi() + entry.getValue().getPeOi();
+                    if (oi>maxOi) {
+                        maxOi = oi;
+                        symbol = entry.getKey();
+                    }
+                }
+            }
+        }
+        if (!configs.getOiBasedTradePlaced() && !symbol.isEmpty()) {
+            String sellSymbol = configs.getOiTradeMap().get(symbol).getCeOi() > configs.getOiTradeMap().get(symbol).getPeOi()
+                    ? symbol : symbol.replace("CE","PE");
+            String op = String.format("Max oi based trade is being initiated for symbol %s, total max sum oi %d", sellSymbol, maxOi);
+            log.info(op);
+            sendMessage.sendMessage(op);
+            placeOrdersForMaxOi(sellSymbol);
+        }
 
         if (now.isAfter(LocalTime.of(14, 31)) && now.isBefore(LocalTime.of(15, 20)) &&
                 !configs.getOiBasedTradePlaced()) {
@@ -957,6 +978,145 @@ public class OITrackScheduler {
             log.error("Error fetching sell symbol");
         }
         return null;
+    }
+
+    public void placeOrdersForMaxOi(String tradeSymbol) throws Exception {
+        String opt = "";
+        if (configs.isOiBasedTradeEnabled() && !configs.getOiBasedTradePlaced()) {
+            opt = "Oi based trade enabled. Initiating trade for " + tradeSymbol;
+            log.info(opt);
+            sendMessage.sendMessage(opt);
+            int qty;
+            String indexName = getIndexName(tradeSymbol);
+            int maxQty = 500;
+            if (indexName.equals("MIDCPNIFTY")) {
+                maxQty = 4200;
+            } else if (indexName.equals("BANKNIFTY")) {
+                maxQty = 900;
+            } else {
+                maxQty = 1800;
+            }
+
+            int i;
+            String tradeToken = "";
+            Double price = 0.0;
+
+            SymbolData sellSymbolData = fetchSellSymbol(tradeSymbol);
+            int strikeDiff;
+
+            strikeDiff = 100; // used for buy order
+            if (indexName.equals("MIDCPNIFTY")) {
+                strikeDiff = 50;
+            } else if (indexName.equals("BANKNIFTY")) {
+                strikeDiff = 300;
+            } else {
+                strikeDiff = 100;
+            }
+
+            if (indexName.equals("MIDCPNIFTY")) {
+                qty = configs.getOiBasedTradeMidcapQty();
+            } else if (indexName.equals("NIFTY")) {
+                qty = configs.getOiBasedTradeQtyNifty();
+            } else if (indexName.equals("BANKNIFTY")) {
+                qty = configs.getOiBasedTradeBankNiftyQty();
+            } else {
+                qty = configs.getOiBasedTradeQtyFinNifty();
+            }
+
+            /*} else {
+                strikeDiff = 200;
+                p1 = 10.0;
+                p2 = 10.0;
+                qty = configs.getOiBasedTradeQtyNonExp();
+            }*/
+            double q1, q2, q3;
+            double maxLoss = configs.getMaxLossAmount();
+            Double sellLtp = getLtp(sellSymbolData.getToken());
+            q1 = getQ1Abs(maxLoss);
+            q2 = getQ2Abs(maxLoss, sellLtp);
+
+            double lotSize;
+            if (indexName.equals("MIDCPNIFTY")) {
+                lotSize = configs.getMidcapNiftyLotSize();
+            } else if (indexName.equals("NIFTY")) {
+                lotSize = configs.getNiftyLotSize();
+            } else if (indexName.equals("BANKNIFTY")) {
+                lotSize = configs.getBankNiftyLotSize();
+            } else {
+                lotSize = configs.getFinniftyLotSize();
+            }
+            log.info("Max Qty {}. Index {}. Tradable Qty {}, LotSize {}", maxQty, indexName, qty, lotSize);
+
+            int fullBatches = qty / maxQty;
+            int remainingQty = qty % maxQty;
+            remainingQty = (remainingQty % (int) lotSize == 0) ? remainingQty : remainingQty - (remainingQty % (int) lotSize);
+            log.info("Trade Details: strikediff {}, price1 {}%, price2 {}%, total qty {}", strikeDiff, p1, p2, qty);
+            SymbolData buySymbolData;
+
+            String optionType = tradeSymbol.endsWith("CE") ? "CE" : "PE";
+            int buyStrike = optionType.equals("CE") ? (sellSymbolData.getStrike() + strikeDiff) :
+                    (sellSymbolData.getStrike() - strikeDiff);
+            buySymbolData = configs.getSymbolMap().get(indexName + "_" + buyStrike + "_" + optionType);
+
+            // place full and remaining orders.
+            Double buyLtp = getLtp(buySymbolData.getToken());
+            for (i = 0; i < fullBatches; i++) {
+                Order order = stopAtMaxLossScheduler.placeOrder(buySymbolData.getSymbol(), buySymbolData.getToken(), buyLtp, maxQty, Constants.TRANSACTION_TYPE_BUY, 0.0);
+                if (order != null) {
+                    opt = String.format("Buy order placed for %s, qty %d", buySymbolData.getSymbol(), maxQty);
+                    log.info(opt);
+                    sendMessage.sendMessage(opt);
+                } else {
+                    opt = String.format("Buy order failed for %s, qty %d", buySymbolData.getSymbol(), maxQty);
+                    log.info(opt);
+                    sendMessage.sendMessage(opt);
+                }
+            }
+            if (remainingQty > 0) {
+                Order order = stopAtMaxLossScheduler.placeOrder(buySymbolData.getSymbol(), buySymbolData.getToken(), buyLtp, remainingQty, Constants.TRANSACTION_TYPE_BUY, 0.0);
+                if (order != null) {
+                    opt = String.format("Buy order placed for %s, qty %d", buySymbolData.getSymbol(), remainingQty);
+                    log.info(opt);
+                    sendMessage.sendMessage(opt);
+                } else {
+                    opt = String.format("Buy order failed for %s, qty %d", buySymbolData.getSymbol(), remainingQty);
+                    log.info(opt);
+                    sendMessage.sendMessage(opt);
+                }
+            }
+
+            // initiate sell orders.
+            Order sellOrder;
+            for (i = 0; i < fullBatches; i++) {
+                sellOrder = stopAtMaxLossScheduler.placeOrder(sellSymbolData.getSymbol(), sellSymbolData.getToken(), sellLtp, maxQty, Constants.TRANSACTION_TYPE_SELL, 0.0);
+                if (sellOrder != null) {
+                    opt = String.format("Sell order placed for %s, qty %d, Price %f", sellSymbolData.getSymbol(), maxQty, sellLtp);
+                    log.info(opt);
+                    sendMessage.sendMessage(opt);
+                } else {
+                    opt = String.format("Sell order failed for %s, qty %d Price %f", sellSymbolData.getSymbol(), maxQty, sellLtp);
+                    log.info(opt);
+                    sendMessage.sendMessage(opt);
+                }
+            }
+            if (remainingQty > 0) {
+                sellOrder = stopAtMaxLossScheduler.placeOrder(sellSymbolData.getSymbol(), sellSymbolData.getToken(), sellLtp, remainingQty, Constants.TRANSACTION_TYPE_SELL, 0.0);
+                if (sellOrder != null) {
+                    opt = String.format("Sell order placed for %s, qty %d, Price %f", sellSymbolData.getSymbol(), remainingQty, sellLtp);
+                    log.info(opt);
+                    sendMessage.sendMessage(opt);
+                } else {
+                    opt = String.format("Sell order failed for %s, qty %d Price %f", sellSymbolData.getSymbol(), remainingQty, sellLtp);
+                    log.info(opt);
+                    sendMessage.sendMessage(opt);
+                }
+            }
+            configs.setOiBasedTradePlaced(true);
+        } else {
+            log.info("Trade found but oi based trade not enabled or trade already placed. Check if manual trade required. Sell {}", tradeSymbol);
+            sendMessage.sendMessage("Trade found but oi based trade not enabled or trade already placed. Check if manual trade required. Sell " + tradeSymbol);
+            sendMessage.sendMessage("Sell symbol " + fetchSellSymbol(tradeSymbol));
+        }
     }
 
     private SymbolData getSymbolData(String symbol) {

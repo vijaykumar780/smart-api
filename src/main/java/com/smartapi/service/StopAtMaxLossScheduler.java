@@ -507,7 +507,7 @@ public class StopAtMaxLossScheduler {
         orderParams.exchange = "NFO";
         orderParams.ordertype = Constants.ORDER_TYPE_LIMIT; //
         orderParams.tradingsymbol = tradeSymbol;
-        orderParams.producttype =Constants.PRODUCT_INTRADAY;
+        orderParams.producttype =Constants.PRODUCT_CARRYFORWARD;
         orderParams.duration = Constants.DURATION_DAY;
         orderParams.transactiontype = transactionType;
         if (transactionType.equals(Constants.TRANSACTION_TYPE_BUY)) {
@@ -548,7 +548,7 @@ public class StopAtMaxLossScheduler {
             }
         }
         try {
-            Thread.sleep(400);
+            Thread.sleep(350);
         } catch (InterruptedException e) {
             log.error("Sleep exception");
         }

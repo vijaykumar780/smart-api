@@ -83,7 +83,7 @@ public class StopAtMaxLossScheduler {
 
     @Scheduled(fixedDelay = 50000)
     public void gc() {
-        //System.gc();
+        System.gc();
         log.info("GC, Total memory {}, Free memory {}, Max memory {}", Runtime.getRuntime().totalMemory()/1000000,
                 Runtime.getRuntime().freeMemory()/1000000, Runtime.getRuntime().maxMemory()/1000000);
     }
@@ -135,7 +135,7 @@ public class StopAtMaxLossScheduler {
 
         JSONArray ordersJsonArray = orders.optJSONArray("data");
         processSlScheduler(ordersJsonArray, positionsJsonArray, exitALLFlag, now, configs.getSymbolExitedFromScheduler());
-        System.gc();
+        //System.gc();
     }
 
     public void processSlScheduler(JSONArray ordersJsonArray,

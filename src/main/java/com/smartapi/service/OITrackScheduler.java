@@ -570,14 +570,14 @@ public class OITrackScheduler {
             }
         }
         log.info("Oi based trade Map");
-        printOiMap();
+        printOiMap(today);
 
         trackMaxOiMail(today);
         log.info("Finished tracking oi based trade");
         System.gc();
     }
 
-    private void printOiMap() {
+    private void printOiMap(String today) {
         List<String> result = new ArrayList<>();
         int j;
         for (Map.Entry<String, OiTrade> entry : configs.getOiTradeMap().entrySet()) {
@@ -587,7 +587,9 @@ public class OITrackScheduler {
         }
         result.sort(String::compareTo);
         for (j=0;j<result.size();j++) {
-            log.info("{} : {}",result.get(j), configs.getOiTradeMap().get(result.get(j)));
+            if (result.get(j).contains(today)) {
+                log.info("{} : {}", result.get(j), configs.getOiTradeMap().get(result.get(j)));
+            }
         }
         result.clear();
 
@@ -598,7 +600,9 @@ public class OITrackScheduler {
         }
         result.sort(String::compareTo);
         for (j=0;j<result.size();j++) {
-            log.info("{} : {}",result.get(j), configs.getOiTradeMap().get(result.get(j)));
+            if (result.get(j).contains(today)) {
+                log.info("{} : {}", result.get(j), configs.getOiTradeMap().get(result.get(j)));
+            }
         }
         result.clear();
 
@@ -609,7 +613,9 @@ public class OITrackScheduler {
         }
         result.sort(String::compareTo);
         for (j=0;j<result.size();j++) {
-            log.info("{} : {}",result.get(j), configs.getOiTradeMap().get(result.get(j)));
+            if (result.get(j).contains(today)) {
+                log.info("{} : {}", result.get(j), configs.getOiTradeMap().get(result.get(j)));
+            }
         }
         result.clear();
 
@@ -620,7 +626,9 @@ public class OITrackScheduler {
         }
         result.sort(String::compareTo);
         for (j=0;j<result.size();j++) {
-            log.info("{} : {}",result.get(j), configs.getOiTradeMap().get(result.get(j)));
+            if (result.get(j).contains(today)) {
+                log.info("{} : {}", result.get(j), configs.getOiTradeMap().get(result.get(j)));
+            }
         }
         result.clear();
     }

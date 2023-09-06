@@ -292,7 +292,7 @@ public class OITrackScheduler {
                         String response = String.format("Index: %s, Option: %s, current oi: %d, Change: %d Change percent: %f Symbol: %s", "NIFTY", symbolData.getStrike() + " " +
                                 symbolData.getSymbol().substring(symbolData.getSymbol().length() - 2), oi, oi - oiMap.get(symbolData.getSymbol()), changePercent, symbolData.getSymbol());
 
-                        if (Math.abs(changePercent) >= configs.getOiPercent() && oi > 500000 && LocalDate.now().getDayOfWeek().equals(DayOfWeek.THURSDAY)) {
+                        if (Math.abs(changePercent) >= configs.getOiPercent() && oi > 500000 && symbolData.getSymbol().contains(today)) {
                             email.append(response);
                             email.append("\n");
                         } else if ((Math.abs(changePercent) >= configs.getOiPercent())) {
@@ -330,7 +330,7 @@ public class OITrackScheduler {
                         String response = String.format("Index: %s, Option: %s, current oi: %d, Change: %d Change percent: %f Symbol: %s", "FINNIFTY", symbolData.getStrike() + " " +
                                 symbolData.getSymbol().substring(symbolData.getSymbol().length() - 2), oi, oi - oiMap.get(symbolData.getSymbol()), changePercent, symbolData.getSymbol());
 
-                        if (Math.abs(changePercent) >= configs.getOiPercent() && oi > 500000 && LocalDate.now().getDayOfWeek().equals(DayOfWeek.TUESDAY)) {
+                        if (Math.abs(changePercent) >= configs.getOiPercent() && oi > 500000 && symbolData.getSymbol().contains(today)) {
                             email.append(response);
                             email.append("\n");
                         } else if ((Math.abs(changePercent) >= configs.getOiPercent())) {
@@ -369,7 +369,7 @@ public class OITrackScheduler {
                         String response = String.format("Index: %s, Option: %s, current oi: %d, Change: %d Change percent: %f Symbol: %s", "MIDCPNIFTY", symbolData.getStrike() + " " +
                                 symbolData.getSymbol().substring(symbolData.getSymbol().length() - 2), oi, oi - oiMap.get(symbolData.getSymbol()), changePercent, symbolData.getSymbol());
 
-                        if (Math.abs(changePercent) >= configs.getOiPercent() && oi > 500000 && LocalDate.now().getDayOfWeek().equals(DayOfWeek.THURSDAY)) {
+                        if (Math.abs(changePercent) >= configs.getOiPercent() && oi > 500000 && symbolData.getSymbol().contains(today)) {
                             email.append(response);
                             email.append("\n");
                         } else if ((Math.abs(changePercent) >= configs.getOiPercent())) {
@@ -407,7 +407,7 @@ public class OITrackScheduler {
                         String response = String.format("Index: %s, Option: %s, current oi: %d, Change: %d Change percent: %f Symbol: %s", "BANKNIFTY", symbolData.getStrike() + " " +
                                 symbolData.getSymbol().substring(symbolData.getSymbol().length() - 2), oi, oi - oiMap.get(symbolData.getSymbol()), changePercent, symbolData.getSymbol());
 
-                        if (Math.abs(changePercent) >= configs.getOiPercent() && oi > 500000 && LocalDate.now().getDayOfWeek().equals(DayOfWeek.THURSDAY)) {
+                        if (Math.abs(changePercent) >= configs.getOiPercent() && oi > 500000 && symbolData.getSymbol().contains(today)) {
                             email.append(response);
                             email.append("\n");
                         } else if ((Math.abs(changePercent) >= configs.getOiPercent())) {
@@ -432,6 +432,10 @@ public class OITrackScheduler {
         for (Map.Entry<String, Integer> entry : oiMap.entrySet()) {
             log.info("{} : {}", entry.getKey(), entry.getValue());
         }*/
+        if (LocalTime.now().isAfter(LocalTime.of(14, 10))) {
+            sendMessage.sendMessage(email.toString());
+        }
+
         for (Map.Entry<String, Integer> entry : oiMap.entrySet()) {
             try {
                 String symbol = entry.getKey();
@@ -650,7 +654,7 @@ public class OITrackScheduler {
                 }
             }
         }
-        if (!configs.getOiBasedTradePlaced() && !symbol.isEmpty()) {
+        if (!configs.getOiBasedTradePlaced() && !symbol.isEmpty() && !symbol.contains("BANKNIFTY")) {
             String sellSymbol = configs.getOiTradeMap().get(symbol).getCeOi() > configs.getOiTradeMap().get(symbol).getPeOi()
                     ? symbol : symbol.replace("CE","PE");
             String op = String.format("Max oi based trade is being initiated for symbol %s, total max sum oi %d", sellSymbol, maxOi);
@@ -721,6 +725,10 @@ public class OITrackScheduler {
             int qty;
             String indexName = getIndexName(tradeSymbol);
             int maxQty = 500;
+            /**
+             * Make max qty changes in stop at max loss scheduler also
+             */
+
             if (indexName.equals("MIDCPNIFTY")) {
                 maxQty = 4200;
             } else if (indexName.equals("BANKNIFTY")) {

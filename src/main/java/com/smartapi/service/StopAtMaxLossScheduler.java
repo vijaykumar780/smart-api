@@ -48,7 +48,6 @@ public class StopAtMaxLossScheduler {
 
     @Autowired
     Configs configs;
-    int maxQty = 1800;
 
     @PostConstruct
     public void init() {
@@ -210,6 +209,7 @@ public class StopAtMaxLossScheduler {
                 log.info("Empty positions, skipping");
                 return;
             }
+
             JSONArray updatedPosArray = getUpdatedPosArray(positionsJsonArray);
             log.info("Trying to close all open positions: {}", updatedPosArray.length());
             sendMail("[SL] Trying to close all open positions: {}");
@@ -222,6 +222,7 @@ public class StopAtMaxLossScheduler {
                     if (buyQty < sellQty) {
                         int totalQty = Math.abs(sellQty - buyQty);
                         for (int i = 0; i < 100; i++) {
+                            int maxQty = getMaxQty(pos.optString("tradingsymbol"));
                             if (totalQty > 0) {
                                 int qty = 0;
                                 if (totalQty <= maxQty) {
@@ -280,6 +281,7 @@ public class StopAtMaxLossScheduler {
                         int totalQty = Math.abs(buyQty - sellQty);
                         for (int i = 0; i < 100; i++) {
                             if (totalQty > 0) {
+                                int maxQty = getMaxQty(pos.optString("tradingsymbol"));
                                 int qty = 0;
                                 if (totalQty <= maxQty) {
                                     qty = totalQty;
@@ -347,6 +349,18 @@ public class StopAtMaxLossScheduler {
             log.info("Max Profit possible {}", sellamount - buyamount);
         }
         log.info("Finished Max loss tracker at {}, time taken {} seconds", LocalTime.now(), SECONDS.between(now, LocalTime.now()));
+    }
+
+    private int getMaxQty(String symbol) {
+        int maxQty = 500;
+        if (symbol.contains("MIDCPNIFTY")) {
+            maxQty = 4200;
+        } else if (symbol.contains("BANKNIFTY")) {
+            maxQty = 900;
+        } else {
+            maxQty = 1800;
+        }
+        return maxQty;
     }
 
     private JSONArray getUpdatedPosArray(JSONArray positionsJsonArray) {

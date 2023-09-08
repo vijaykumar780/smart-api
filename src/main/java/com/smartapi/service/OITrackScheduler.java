@@ -432,7 +432,7 @@ public class OITrackScheduler {
         for (Map.Entry<String, Integer> entry : oiMap.entrySet()) {
             log.info("{} : {}", entry.getKey(), entry.getValue());
         }*/
-        if (LocalTime.now().isAfter(LocalTime.of(14, 10))) {
+        if (LocalTime.now().isAfter(LocalTime.of(14, 10)) && !email.toString().isEmpty()) {
             sendMessage.sendMessage(email.toString());
         }
 

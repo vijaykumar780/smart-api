@@ -94,8 +94,16 @@ public class Controller {
 
     @GetMapping("/updateOiTradePlacedFalse")
     public void updateOiTradePlacedFalse() {
-        log.info("updated OiTradePlacedFalse");
-        configs.setOiBasedTradePlaced(false);
+        LocalTime now = LocalTime.now();
+        // To handle volatility
+        if (now.isAfter(LocalTime.of(15, 5)) && now.isBefore(LocalTime.of(17, 0))) {
+            sendMessage.sendMessage("updated OiTradePlacedFalse to false");
+            log.info("updated OiTradePlacedFalse to false");
+            configs.setOiBasedTradePlaced(false);
+        } else {
+            sendMessage.sendMessage("Oi based trade placed can not be set false now");
+            log.info("Oi based trade placed can not be set false now");
+        }
     }
 
     @GetMapping("/getPassword")

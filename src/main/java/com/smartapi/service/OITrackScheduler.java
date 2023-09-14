@@ -76,6 +76,7 @@ public class OITrackScheduler {
         configs.setSymbolMap(new HashMap<>());
         configs.setOiTradeMap(new HashMap<>());
         configs.setOiBasedTradePlaced(false);
+        configs.setTradedOptions(new ArrayList<>());
 
         log.info("Initializing rest template");
         restTemplate = new RestTemplateBuilder().setConnectTimeout(Duration.ofSeconds(10))
@@ -253,6 +254,12 @@ public class OITrackScheduler {
             midcapLtp = configs.getMidcapNiftyValue();
             log.info("Using rough index values nifty: {}, finnifty: {}, midcapnifty {}, BankNifty {}. Nifty exp {}, fnnifty exp {}, midcap exp {}, BankNifty exp {}",
                     niftyLtp, finniftyLtp, midcapLtp, bankNiftyLtp, expiryDateNifty, expiryDateFinNifty, expiryDateMidcapNifty, expiryDateBankNifty);
+            if (configs.getTradedOptions()!=null && !configs.getTradedOptions().isEmpty()) {
+                log.info("Traded options");
+                for (String str : configs.getTradedOptions()) {
+                    log.info(str);
+                }
+            }
 
         } catch (InterruptedException e) {
             log.error("Error fetch index ltp", e);
@@ -294,7 +301,7 @@ public class OITrackScheduler {
 
                         if (Math.abs(changePercent) >= configs.getOiPercent() && oi > 500000 && symbolData.getSymbol().contains(today)) {
                             email.append(response);
-                            email.append("\n");
+                            email.append("\n\n");
                         } else if ((Math.abs(changePercent) >= configs.getOiPercent())) {
                             log.info("{} has change % above oi percent. percent {}", symbolData.getSymbol(), changePercent);
                         }
@@ -332,7 +339,7 @@ public class OITrackScheduler {
 
                         if (Math.abs(changePercent) >= configs.getOiPercent() && oi > 500000 && symbolData.getSymbol().contains(today)) {
                             email.append(response);
-                            email.append("\n");
+                            email.append("\n\n");
                         } else if ((Math.abs(changePercent) >= configs.getOiPercent())) {
                             log.info("{} has change % above oi percent. Percent {}", symbolData.getSymbol(), changePercent);
                         }
@@ -371,7 +378,7 @@ public class OITrackScheduler {
 
                         if (Math.abs(changePercent) >= configs.getOiPercent() && oi > 500000 && symbolData.getSymbol().contains(today)) {
                             email.append(response);
-                            email.append("\n");
+                            email.append("\n\n");
                         } else if ((Math.abs(changePercent) >= configs.getOiPercent())) {
                             log.info("{} has change % above oi percent. percent {}", symbolData.getSymbol(), changePercent);
                         }
@@ -409,7 +416,7 @@ public class OITrackScheduler {
 
                         if (Math.abs(changePercent) >= configs.getOiPercent() && oi > 500000 && symbolData.getSymbol().contains(today)) {
                             email.append(response);
-                            email.append("\n");
+                            email.append("\n\n");
                         } else if ((Math.abs(changePercent) >= configs.getOiPercent())) {
                             log.info("{} has change % above oi percent. percent {}", symbolData.getSymbol(), changePercent);
                         }
@@ -798,6 +805,11 @@ public class OITrackScheduler {
                     (sellSymbolData.getStrike() - strikeDiff);
             buySymbolData = configs.getSymbolMap().get(indexName + "_" + buyStrike + "_" + optionType);
 
+            List<String> tradedOptions = configs.getTradedOptions();
+            tradedOptions.add(sellSymbolData.getSymbol());
+            tradedOptions.add(buySymbolData.getSymbol());
+            configs.setTradedOptions(tradedOptions);
+
             // place full and remaining orders.
             Double buyLtp = getLtp(buySymbolData.getToken());
             for (i = 0; i < fullBatches; i++) {
@@ -1074,6 +1086,11 @@ public class OITrackScheduler {
                     (sellSymbolData.getStrike() - strikeDiff);
             buySymbolData = configs.getSymbolMap().get(indexName + "_" + buyStrike + "_" + optionType);
 
+            List<String> tradedOptions = configs.getTradedOptions();
+            tradedOptions.add(sellSymbolData.getSymbol());
+            tradedOptions.add(buySymbolData.getSymbol());
+            configs.setTradedOptions(tradedOptions);
+
             // place full and remaining orders.
             Double buyLtp = getLtp(buySymbolData.getToken());
             for (i = 0; i < fullBatches; i++) {
@@ -1330,7 +1347,7 @@ public class OITrackScheduler {
 
                             if (Math.abs(changePercent) >= configs.getOiPercent() && oi > 500000 && LocalDate.now().getDayOfWeek().equals(DayOfWeek.THURSDAY)) {
                                 email.append(response);
-                                email.append("\n");
+                                email.append("\n\n");
                             } else if ((Math.abs(changePercent) >= configs.getOiPercent())) {
                                 log.info("{} has change % above oi percent", symbolData.getSymbol());
                             }
@@ -1362,7 +1379,7 @@ public class OITrackScheduler {
 
                             if (Math.abs(changePercent) >= configs.getOiPercent() && oi > 500000 && LocalDate.now().getDayOfWeek().equals(DayOfWeek.TUESDAY)) {
                                 email.append(response);
-                                email.append("\n");
+                                email.append("\n\n");
                             } else if ((Math.abs(changePercent) >= configs.getOiPercent())) {
                                 log.info("{} has change % above oi percent", symbolData.getSymbol());
                             }

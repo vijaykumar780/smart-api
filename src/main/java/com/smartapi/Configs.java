@@ -133,6 +133,8 @@ public class Configs {
 
 	private Boolean oiBasedTradePlaced;
 
+	private List<String> tradedOptions = new ArrayList<>();
+
 	List<String> totps = new ArrayList<>();
 	private String password = "8080";
     // japantokyo8

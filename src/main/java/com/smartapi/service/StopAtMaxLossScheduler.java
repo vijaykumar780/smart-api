@@ -87,7 +87,7 @@ public class StopAtMaxLossScheduler {
                 Runtime.getRuntime().freeMemory()/1000000, Runtime.getRuntime().maxMemory()/1000000);
     }
 
-    @Scheduled(fixedDelay = 2000) // (fixedDelay = 150000)
+    @Scheduled(fixedDelay = 1000) // (fixedDelay = 150000)
     public void stopOnMaxLoss() throws Exception {
         stopOnMaxLossProcess(false);
     }
@@ -446,6 +446,25 @@ public class StopAtMaxLossScheduler {
                         break;
                     }
                 }
+                LocalTime now = LocalTime.now();
+                // To handle volatility
+                boolean manualTradePlaced = false;
+                for (i = 0; i < positionsJsonArray.length(); i++) {
+                    JSONObject pos = positionsJsonArray.optJSONObject(i);
+                    if (pos != null && !pos.optString("netqty").equals("0")) {
+                        if (configs.getTradedOptions() != null && !configs.getTradedOptions().isEmpty()
+                        && !configs.getTradedOptions().contains(pos.optString("tradingsymbol"))
+                        && now.isBefore(LocalTime.of(15, 4))) {
+                            manualTradePlaced = true;
+                        }
+                    }
+                }
+                if (manualTradePlaced==true) {
+                    log.info("Manual trade not allowed now, closing pos");
+                    sendMessage.sendMessage("Manual trade not allowed now, closing pos");
+                    return true;
+                }
+
                 if (sellOptionSymbol.isEmpty()) {
                     log.info("Sell pos not found, skipping");
                     return false;

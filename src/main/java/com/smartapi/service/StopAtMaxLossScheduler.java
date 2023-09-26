@@ -101,7 +101,6 @@ public class StopAtMaxLossScheduler {
             log.info("Current time {} is beyond range {} to {}. Threshold: {} [As per exp / non exp]", now, localStartTimeMarket, localEndTime, maxLossAmount);
             return;
         }
-        log.info("Starting Max loss tracker. Threshold: [As per exp or non exp] {} at time {}", maxLossAmount, now);
         if (historySmartConnect == null || tradingSmartConnect == null || marketSmartConnect ==null) {
             init();
         }
@@ -123,7 +122,6 @@ public class StopAtMaxLossScheduler {
             return;
         }
 
-        log.info("Fetching orders");
         JSONObject orders = marketSmartConnect.getOrderHistory("v122968");
         if (orders == null) {
             log.info("Re-fetch orders");
@@ -197,10 +195,10 @@ public class StopAtMaxLossScheduler {
                         Order cancelOrder = tradingSmartConnect.cancelOrder(order.optString("orderid"), order.optString("variety"));
                         if (cancelOrder == null) {
                             log.info("Retry cancel order");
-                            Thread.sleep(290);
+                            Thread.sleep(100);
                             cancelOrder = tradingSmartConnect.cancelOrder(order.optString("orderid"), order.optString("variety"));
                         }
-                        Thread.sleep(290);
+                        Thread.sleep(100);
                         log.info("Cancelled order {}. Symbol {}. Order {}", order.optString("orderid"), order.optString("tradingsymbol"), cancelOrder);
                     }
                 }
@@ -254,7 +252,7 @@ public class StopAtMaxLossScheduler {
                                     log.info("Buy order failed to processed, retrying");
                                     init();
                                     try {
-                                        Thread.sleep(350);
+                                        Thread.sleep(100);
                                     } catch (InterruptedException e) {
                                         e.printStackTrace();
                                     }
@@ -264,7 +262,7 @@ public class StopAtMaxLossScheduler {
                                         log.error("Error in placing order for {}", pos.optString("symboltoken"), e);
                                     }
                                 }
-                                Thread.sleep(250);
+                                Thread.sleep(100);
                                 log.info("Order placed to close pos {}", order);
                                 try {
                                     List<String> symbolsExitedFromScheduler = configs.getSymbolExitedFromScheduler();
@@ -316,7 +314,7 @@ public class StopAtMaxLossScheduler {
                                     log.info("Sell order failed to processed, retrying");
                                     init();
                                     try {
-                                        Thread.sleep(350);
+                                        Thread.sleep(100);
                                     } catch (InterruptedException e) {
                                         e.printStackTrace();
                                     }
@@ -326,7 +324,7 @@ public class StopAtMaxLossScheduler {
                                         log.error("Error in placing order for {}", pos.optString("symboltoken"), e);
                                     }
                                 }
-                                Thread.sleep(250);
+                                Thread.sleep(100);
                                 log.info("Order placed to close pos {}", order);
                             } else {
                                 break;
@@ -345,10 +343,8 @@ public class StopAtMaxLossScheduler {
             }
 
         } else {
-            log.info("MTM: {}", mtm);
-            log.info("Max Profit possible {}", sellamount - buyamount);
+            log.info("[Max loss tracker]. Threshold: {}, MTM {}, Max Profit possible {} at time {}", maxLossAmount, mtm, sellamount - buyamount,  now);
         }
-        log.info("Finished Max loss tracker at {}, time taken {} seconds", LocalTime.now(), SECONDS.between(now, LocalTime.now()));
     }
 
     private int getMaxQty(String symbol) {
@@ -570,7 +566,7 @@ public class StopAtMaxLossScheduler {
             log.info("Buy order failed to processed, retrying");
             init();
             try {
-                Thread.sleep(350);
+                Thread.sleep(200);
             } catch (InterruptedException e) {
                 log.error("Sleep exception");
             }
@@ -581,7 +577,7 @@ public class StopAtMaxLossScheduler {
             }
         }
         try {
-            Thread.sleep(350);
+            Thread.sleep(200);
         } catch (InterruptedException e) {
             log.error("Sleep exception");
         }

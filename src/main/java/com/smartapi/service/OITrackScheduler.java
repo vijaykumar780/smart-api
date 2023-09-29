@@ -661,7 +661,9 @@ public class OITrackScheduler {
                 }
             }
         }
-        if (!configs.getOiBasedTradePlaced() && !symbol.isEmpty() && !symbol.contains("BANKNIFTY")) {
+        if (symbol.contains("MIDCPNIFTY") && now.isBefore(LocalTime.of(14, 45))) {
+            log.info("Skipping trade for {} now because of time", symbol);
+        } else if (!configs.getOiBasedTradePlaced() && !symbol.isEmpty() && !symbol.contains("BANKNIFTY")) {
             String sellSymbol = configs.getOiTradeMap().get(symbol).getCeOi() > configs.getOiTradeMap().get(symbol).getPeOi()
                     ? symbol : symbol.replace("CE","PE");
             String op = String.format("Max oi based trade is being initiated for symbol %s, total max sum oi %d", sellSymbol, maxOi);

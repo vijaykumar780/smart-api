@@ -168,6 +168,10 @@ public class StopAtMaxLossScheduler {
         if (!isExpiry() && mtm >=0.0 && mtm>= ((double)configs.getNonExpMaxProfit())) {
             nonExpMaxProfit = true;
         }*/
+
+        // Strict sl orders to prevent slippages
+        processStrictSl(mtm, modifiedMaxLoss, ordersJsonArray, positionsJsonArray);
+
         if ((mtm <= 0 && Math.abs(mtm) >= modifiedMaxLoss) || exitALLFlag ||
                 isExitAllPosRequired || !isTradeAllowed) {
             log.info("Flags exitALLFlag {}, isExitAllPosRequired {}, isExitRequiredForReTradeAtSl {}", exitALLFlag, isExitAllPosRequired, isExitRequiredForReTradeAtSl);
@@ -345,6 +349,117 @@ public class StopAtMaxLossScheduler {
         } else {
             log.info("[Max loss tracker]. Threshold: {}, MTM {}, Max Profit possible {} at time {}", maxLossAmount, mtm, sellamount - buyamount,  now);
         }
+    }
+
+    private void processStrictSl(Double mtm,
+                                 Double modifiedMaxLoss,
+                                 JSONArray ordersJsonArray,
+                                 JSONArray positionsJsonArray) {
+        try {
+            double triggerLossForStrictSl = 0.7 * modifiedMaxLoss;
+            if (mtm < 0 && Math.abs(mtm) >= triggerLossForStrictSl) {
+                if (ordersJsonArray == null || ordersJsonArray.length() == 0) {
+                    log.info("[processStrictSl] Orders array empty");
+                } else {
+                    for (int i = 0; i < ordersJsonArray.length(); i++) {
+                        JSONObject order = ordersJsonArray.optJSONObject(i);
+                        if ("open".equals(order.optString("status")) || "trigger pending".equals(order.optString("status"))) {
+                            log.info("[processStrictSl] Cancelling order {}. Symbol {}", order.optString("orderid"), order.optString("tradingsymbol"));
+                            Order cancelOrder = tradingSmartConnect.cancelOrder(order.optString("orderid"), order.optString("variety"));
+                            if (cancelOrder == null) {
+                                log.info("Retry cancel order");
+                                Thread.sleep(100);
+                                cancelOrder = tradingSmartConnect.cancelOrder(order.optString("orderid"), order.optString("variety"));
+                            }
+                            Thread.sleep(100);
+                            log.info("[processStrictSl] Cancelled order {}. Symbol {}. Order {}", order.optString("orderid"), order.optString("tradingsymbol"), cancelOrder);
+                        }
+                    }
+                }
+            }
+
+            int i;
+            String sellOptionSymbol = "";
+            double ltp = 0.0;
+            double netQty = 1.0;
+            String productType = "";
+            String token = "";
+
+            for (i = 0; i < positionsJsonArray.length(); i++) {
+                JSONObject pos = positionsJsonArray.optJSONObject(i);
+                if (pos != null && pos.optString("netqty").contains("-")) {
+                    sellOptionSymbol = pos.optString("tradingsymbol");
+                    ltp = Double.valueOf(pos.optString("ltp"));
+                    netQty = Double.valueOf(pos.optDouble("netqty"));
+                    productType = pos.optString("producttype");
+                    token = pos.optString("symboltoken");
+                    break;
+                }
+            }
+            if (!sellOptionSymbol.isEmpty()) {
+                log.info("Found sold pos {}", sellOptionSymbol);
+                netQty = Math.abs(netQty);
+                double slHitPrice = ((maxLossAmount - Math.abs(mtm)) / netQty) + ltp;
+                int totalQty = (int) netQty;
+                int maxQty = maxQty(sellOptionSymbol);
+
+                int fullBatches = totalQty / maxQty;
+                int remainingQty = totalQty % maxQty;
+                int lotSize = fetchLotSize(sellOptionSymbol);
+                remainingQty = (remainingQty % (int) lotSize == 0) ? remainingQty : remainingQty - (remainingQty % (int) lotSize);
+
+                String opt;
+                for (i = 0; i < fullBatches; i++) {
+                    Order order = slOrder(sellOptionSymbol, token, slHitPrice, maxQty, Constants.TRANSACTION_TYPE_BUY, productType);
+                    if (order != null) {
+                        opt = String.format("SL order placed for %s, qty %d", sellOptionSymbol, maxQty);
+                        log.info(opt);
+                    } else {
+                        opt = String.format("SL order failed for %s, qty %d", sellOptionSymbol, maxQty);
+                        log.info(opt);
+                    }
+                }
+                if (remainingQty > 0) {
+                    Order order = slOrder(sellOptionSymbol, token, slHitPrice, remainingQty, Constants.TRANSACTION_TYPE_BUY, productType);
+                    if (order != null) {
+                        opt = String.format("SL order placed for %s, qty %d", sellOptionSymbol, remainingQty);
+                        log.info(opt);
+                    } else {
+                        opt = String.format("SL order failed for %s, qty %d", sellOptionSymbol, remainingQty);
+                        log.info(opt);
+                    }
+                }
+
+            }
+        } catch (Exception e) {
+            log.error("Error in sl trigger trades", e);
+        }
+    }
+
+    private int fetchLotSize(String symbol) {
+        int lotSize;
+        if (symbol.startsWith("MIDCPNIFTY")) {
+            lotSize = configs.getMidcapNiftyLotSize();
+        } else if (symbol.startsWith("NIFTY")) {
+            lotSize = configs.getNiftyLotSize();
+        } else if (symbol.startsWith("BANKNIFTY")) {
+            lotSize = configs.getBankNiftyLotSize();
+        } else {
+            lotSize = configs.getFinniftyLotSize();
+        }
+        return lotSize;
+    }
+
+    private int maxQty(String symbol) {
+        int maxQty;
+        if (symbol.contains("MIDCPNIFTY")) {
+            maxQty = 4200;
+        } else if (symbol.contains("BANKNIFTY")) {
+            maxQty = 900;
+        } else {
+            maxQty = 1800;
+        }
+        return maxQty;
     }
 
     private int getMaxQty(String symbol) {
@@ -556,6 +671,56 @@ public class StopAtMaxLossScheduler {
                 orderParams.price = roundOff(sellPrice);
             }
         }
+        try {
+            order = tradingSmartConnect.placeOrder(orderParams, orderParams.variety);
+        } catch (Exception | SmartAPIException e) {
+            order = null;
+            log.error("Error in placing order for {}", tradeSymbol, e);
+        }
+        if (order == null) {
+            log.info("Buy order failed to processed, retrying");
+            init();
+            try {
+                Thread.sleep(200);
+            } catch (InterruptedException e) {
+                log.error("Sleep exception");
+            }
+            try {
+                order = tradingSmartConnect.placeOrder(orderParams, orderParams.variety);
+            } catch (Exception | SmartAPIException e) {
+                log.error("Error in placing order for {}", tradeSymbol, e);
+            }
+        }
+        try {
+            Thread.sleep(200);
+        } catch (InterruptedException e) {
+            log.error("Sleep exception");
+        }
+        return order;
+    }
+
+    public Order slOrder(String tradeSymbol,
+                         String tradeToken,
+                         Double price,
+                         Integer qty,
+                         String transactionType,
+                         String productType) {
+        Order order = null;
+
+        OrderParams orderParams = new OrderParams();
+        orderParams.variety = Constants.VARIETY_STOPLOSS;
+        orderParams.quantity = qty;
+        orderParams.symboltoken = tradeToken;
+        orderParams.exchange = "NFO";
+        orderParams.ordertype = Constants.ORDER_TYPE_STOPLOSS_LIMIT; //
+        orderParams.tradingsymbol = tradeSymbol;
+        orderParams.producttype = productType;
+        orderParams.duration = Constants.DURATION_DAY;
+        orderParams.transactiontype = transactionType;
+
+        orderParams.price = roundOff(price + 2.00);
+        orderParams.triggerprice = String.valueOf(roundOff(price));
+
         try {
             order = tradingSmartConnect.placeOrder(orderParams, orderParams.variety);
         } catch (Exception | SmartAPIException e) {

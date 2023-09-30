@@ -358,78 +358,98 @@ public class StopAtMaxLossScheduler {
         try {
             double triggerLossForStrictSl = 0.7 * modifiedMaxLoss;
             if (mtm < 0 && Math.abs(mtm) >= triggerLossForStrictSl) {
-                if (ordersJsonArray == null || ordersJsonArray.length() == 0) {
-                    log.info("[processStrictSl] Orders array empty");
-                } else {
-                    for (int i = 0; i < ordersJsonArray.length(); i++) {
+                int i;
+                String sellOptionSymbol = "";
+                double ltp = 0.0;
+                double netQty = 1.0;
+                String productType = "";
+                String token = "";
+
+                for (i = 0; i < positionsJsonArray.length(); i++) {
+                    JSONObject pos = positionsJsonArray.optJSONObject(i);
+                    if (pos != null && pos.optString("netqty").contains("-")) {
+                        sellOptionSymbol = pos.optString("tradingsymbol");
+                        ltp = Double.valueOf(pos.optString("ltp"));
+                        netQty = Double.valueOf(pos.optDouble("netqty"));
+                        productType = pos.optString("producttype");
+                        token = pos.optString("symboltoken");
+                        break;
+                    }
+                }
+
+                boolean isStrictSlAlreadyPlaced = false;
+                int orderQty = 0;
+                if (ordersJsonArray != null || ordersJsonArray.length() > 0) {
+                    for (i = 0; i < ordersJsonArray.length(); i++) {
                         JSONObject order = ordersJsonArray.optJSONObject(i);
+                        String orderSymbol = order.optString("tradingsymbol");
                         if ("open".equals(order.optString("status")) || "trigger pending".equals(order.optString("status"))) {
-                            log.info("[processStrictSl] Cancelling order {}. Symbol {}", order.optString("orderid"), order.optString("tradingsymbol"));
-                            Order cancelOrder = tradingSmartConnect.cancelOrder(order.optString("orderid"), order.optString("variety"));
-                            if (cancelOrder == null) {
-                                log.info("Retry cancel order");
-                                Thread.sleep(100);
-                                cancelOrder = tradingSmartConnect.cancelOrder(order.optString("orderid"), order.optString("variety"));
+                            if (orderSymbol.equals(sellOptionSymbol)) {
+                                orderQty += Integer.parseInt(order.optString("quantity"));
                             }
-                            Thread.sleep(100);
-                            log.info("[processStrictSl] Cancelled order {}. Symbol {}. Order {}", order.optString("orderid"), order.optString("tradingsymbol"), cancelOrder);
                         }
                     }
                 }
-            }
 
-            int i;
-            String sellOptionSymbol = "";
-            double ltp = 0.0;
-            double netQty = 1.0;
-            String productType = "";
-            String token = "";
-
-            for (i = 0; i < positionsJsonArray.length(); i++) {
-                JSONObject pos = positionsJsonArray.optJSONObject(i);
-                if (pos != null && pos.optString("netqty").contains("-")) {
-                    sellOptionSymbol = pos.optString("tradingsymbol");
-                    ltp = Double.valueOf(pos.optString("ltp"));
-                    netQty = Double.valueOf(pos.optDouble("netqty"));
-                    productType = pos.optString("producttype");
-                    token = pos.optString("symboltoken");
-                    break;
+                if ((int) Math.abs(netQty) == orderQty) {
+                    isStrictSlAlreadyPlaced = true;
                 }
-            }
-            if (!sellOptionSymbol.isEmpty()) {
-                log.info("Found sold pos {}", sellOptionSymbol);
-                netQty = Math.abs(netQty);
-                double slHitPrice = ((maxLossAmount - Math.abs(mtm)) / netQty) + ltp;
-                int totalQty = (int) netQty;
-                int maxQty = maxQty(sellOptionSymbol);
 
-                int fullBatches = totalQty / maxQty;
-                int remainingQty = totalQty % maxQty;
-                int lotSize = fetchLotSize(sellOptionSymbol);
-                remainingQty = (remainingQty % (int) lotSize == 0) ? remainingQty : remainingQty - (remainingQty % (int) lotSize);
-
-                String opt;
-                for (i = 0; i < fullBatches; i++) {
-                    Order order = slOrder(sellOptionSymbol, token, slHitPrice, maxQty, Constants.TRANSACTION_TYPE_BUY, productType);
-                    if (order != null) {
-                        opt = String.format("SL order placed for %s, qty %d", sellOptionSymbol, maxQty);
-                        log.info(opt);
+                if (!isStrictSlAlreadyPlaced) {
+                    if (ordersJsonArray == null || ordersJsonArray.length() == 0) {
+                        log.info("[processStrictSl] Orders array empty");
                     } else {
-                        opt = String.format("SL order failed for %s, qty %d", sellOptionSymbol, maxQty);
-                        log.info(opt);
+                        for (i = 0; i < ordersJsonArray.length(); i++) {
+                            JSONObject order = ordersJsonArray.optJSONObject(i);
+                            if ("open".equals(order.optString("status")) || "trigger pending".equals(order.optString("status"))) {
+                                log.info("[processStrictSl] Cancelling order {}. Symbol {}", order.optString("orderid"), order.optString("tradingsymbol"));
+                                Order cancelOrder = tradingSmartConnect.cancelOrder(order.optString("orderid"), order.optString("variety"));
+                                if (cancelOrder == null) {
+                                    log.info("Retry cancel order");
+                                    Thread.sleep(100);
+                                    cancelOrder = tradingSmartConnect.cancelOrder(order.optString("orderid"), order.optString("variety"));
+                                }
+                                Thread.sleep(100);
+                                log.info("[processStrictSl] Cancelled order {}. Symbol {}. Order {}", order.optString("orderid"), order.optString("tradingsymbol"), cancelOrder);
+                            }
+                        }
+                    }
+
+                    if (!sellOptionSymbol.isEmpty()) {
+                        log.info("Found sold pos {}", sellOptionSymbol);
+                        netQty = Math.abs(netQty);
+                        double slHitPrice = ((maxLossAmount - Math.abs(mtm)) / netQty) + ltp;
+                        int totalQty = (int) netQty;
+                        int maxQty = maxQty(sellOptionSymbol);
+
+                        int fullBatches = totalQty / maxQty;
+                        int remainingQty = totalQty % maxQty;
+                        int lotSize = fetchLotSize(sellOptionSymbol);
+                        remainingQty = (remainingQty % (int) lotSize == 0) ? remainingQty : remainingQty - (remainingQty % (int) lotSize);
+
+                        String opt;
+                        for (i = 0; i < fullBatches; i++) {
+                            Order order = slOrder(sellOptionSymbol, token, slHitPrice, maxQty, Constants.TRANSACTION_TYPE_BUY, productType);
+                            if (order != null) {
+                                opt = String.format("SL order placed for %s, qty %d", sellOptionSymbol, maxQty);
+                                log.info(opt);
+                            } else {
+                                opt = String.format("SL order failed for %s, qty %d", sellOptionSymbol, maxQty);
+                                log.info(opt);
+                            }
+                        }
+                        if (remainingQty > 0) {
+                            Order order = slOrder(sellOptionSymbol, token, slHitPrice, remainingQty, Constants.TRANSACTION_TYPE_BUY, productType);
+                            if (order != null) {
+                                opt = String.format("SL order placed for %s, qty %d", sellOptionSymbol, remainingQty);
+                                log.info(opt);
+                            } else {
+                                opt = String.format("SL order failed for %s, qty %d", sellOptionSymbol, remainingQty);
+                                log.info(opt);
+                            }
+                        }
                     }
                 }
-                if (remainingQty > 0) {
-                    Order order = slOrder(sellOptionSymbol, token, slHitPrice, remainingQty, Constants.TRANSACTION_TYPE_BUY, productType);
-                    if (order != null) {
-                        opt = String.format("SL order placed for %s, qty %d", sellOptionSymbol, remainingQty);
-                        log.info(opt);
-                    } else {
-                        opt = String.format("SL order failed for %s, qty %d", sellOptionSymbol, remainingQty);
-                        log.info(opt);
-                    }
-                }
-
             }
         } catch (Exception e) {
             log.error("Error in sl trigger trades", e);

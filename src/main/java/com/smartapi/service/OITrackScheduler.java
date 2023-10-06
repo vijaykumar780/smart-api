@@ -232,9 +232,6 @@ public class OITrackScheduler {
         LocalTime localStartTimeMarket = LocalTime.of(13, 15, 0);
         LocalTime localEndTime = LocalTime.of(15, 15, 1);
         LocalTime now1 = LocalTime.now();
-        if (!(now1.isAfter(localStartTimeMarket) && now1.isBefore(localEndTime))) {
-            return;
-        }
 
         LocalDate expiryDateNifty = getExpiryDate(DayOfWeek.THURSDAY); // use wednesday if holiday on exp
         LocalDate expiryDateFinNifty = getExpiryDate(DayOfWeek.TUESDAY); // if holiday then skip its monday exp as midcap there
@@ -247,10 +244,10 @@ public class OITrackScheduler {
         double bankNiftyLtp = 0;
 
         try {
-            niftyLtp = getOi("26000", "NSE");
-            bankNiftyLtp = getOi("26009", "NSE");
+            niftyLtp = getOi("99926000", "NSE");
+            bankNiftyLtp = getOi("99926009", "NSE");
 
-            finniftyLtp = configs.getFinniftyValue();
+            finniftyLtp = getOi("99926037", "NSE");
             midcapLtp = configs.getMidcapNiftyValue();
             log.info("Using rough index values nifty: {}, finnifty: {}, midcapnifty {}, BankNifty {}. Nifty exp {}, fnnifty exp {}, midcap exp {}, BankNifty exp {}",
                     niftyLtp, finniftyLtp, midcapLtp, bankNiftyLtp, expiryDateNifty, expiryDateFinNifty, expiryDateMidcapNifty, expiryDateBankNifty);
@@ -263,6 +260,9 @@ public class OITrackScheduler {
 
         } catch (InterruptedException e) {
             log.error("Error fetch index ltp", e);
+        }
+        if (!(now1.isAfter(localStartTimeMarket) && now1.isBefore(localEndTime))) {
+            return;
         }
 
         int oi;

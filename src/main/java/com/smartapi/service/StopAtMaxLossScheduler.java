@@ -566,7 +566,7 @@ public class StopAtMaxLossScheduler {
             Double ltp = 0.0;
             Double soldPrice = 0.0;
             if (ordersJsonArray == null || ordersJsonArray.length()==0 || positionsJsonArray == null || positionsJsonArray.length()==0) {
-                log.info("Empty order or position array, skipping 2x sl check");
+                //log.info("Empty order or position array, skipping 2x sl check");
                 return false;
             } else {
                 for (i = 0; i < positionsJsonArray.length(); i++) {
@@ -641,9 +641,7 @@ public class StopAtMaxLossScheduler {
                         }
                     }
                 }
-                log.info("Is exitReqOnBasisOfOi: {}", exitReqOnBasisOfOi);
 
-                log.info("[2x sl check] Symbol: {}, soldPrice: {}, ltp: {}, Sl price: {}, sl Hit Required: {}", sellOptionSymbol, soldPrice, ltp, slPrice, slHitRequired);
                 if (slHitRequired) {
                     String slHitReq = String.format("Sl hit required for 2x sl. symbol %s, sl price %s. Will close all pos, check manually also", sellOptionSymbol, slPrice);
                     log.info(slHitReq);

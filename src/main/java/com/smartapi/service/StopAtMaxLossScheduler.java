@@ -612,11 +612,11 @@ public class StopAtMaxLossScheduler {
                 Double slPrice;
                 if (soldPrice < 5.0) {
                     //slPrice = 2 * soldPrice + 3;
-                    slPrice = 13.0;
+                    slPrice = 16.0;
                 } else if (soldPrice >= 5.0 && soldPrice <= 10.0) {
-                    slPrice = 2 * soldPrice + 5;
+                    slPrice = 2 * soldPrice + 6;
                 } else {
-                    slPrice = 2 * soldPrice;
+                    slPrice = 2 * soldPrice + 6;
                 }
                 boolean slHitRequired = (ltp >= slPrice);
 
@@ -627,7 +627,7 @@ public class StopAtMaxLossScheduler {
 
                 OiTrade oiTrade = configs.getOiTradeMap().getOrDefault(mapKey, null);
                 boolean exitReqOnBasisOfOi = false;
-                int buffer = 20000;
+                int buffer = 100000;
                 if (oiTrade!=null) {
                     int ceOi = oiTrade.getCeOi();
                     int peOi = oiTrade.getPeOi();
@@ -650,6 +650,14 @@ public class StopAtMaxLossScheduler {
                     String slHitReq = String.format("EXIT required because reverse oi crossover. symbol %s. Will close all pos, check manually also", sellOptionSymbol);
                     log.info(slHitReq);
                     sendMail(slHitReq);
+
+                    configs.setOiBasedTradePlaced(false);
+                    slHitReq = String.format("Reset oi based trade to false", sellOptionSymbol);
+                    log.info(slHitReq);
+                    sendMail(slHitReq);
+
+                    configs.setTradedOptions(new ArrayList<>());
+
                 }
                 return slHitRequired || exitReqOnBasisOfOi;
             }

@@ -266,17 +266,17 @@ public class OITrackScheduler {
         }
 
         int oi;
-        int diff = 600; // index value diff
-        int finniftyDiff = 2000;
+        int niftyDiff = 500; // index value diff
+        int finniftyDiff = 500;
         int midcapDiff = 1000;
-        int bankNiftyDiff = 1000;
+        int bankNiftyDiff = 800;
 
         StringBuilder email = new StringBuilder();
         List<SymbolData> symbols = configs.getSymbolDataList();
         for (SymbolData symbolData : symbols) {
             try {
                 if (symbolData.getName().equals("NIFTY") && (expiryDateNifty.equals(symbolData.getExpiry()) ||
-                        getExpiryDate(DayOfWeek.WEDNESDAY).equals(symbolData.getExpiry())) && Math.abs(symbolData.getStrike() - niftyLtp) <= diff) {
+                        getExpiryDate(DayOfWeek.WEDNESDAY).equals(symbolData.getExpiry())) && Math.abs(symbolData.getStrike() - niftyLtp) <= niftyDiff) {
                     String name = "";
                     name = name + "NIFTY_";
                     name = name + symbolData.getStrike() + "_" + (symbolData.getSymbol().endsWith("CE") ? "CE" : "PE");
@@ -477,6 +477,15 @@ public class OITrackScheduler {
                                     String tradeSymbol = newCeOi > newPeOi ? symbol : peSymbol;
                                     String opt = String.format("Symbol %s has Oi cross. OiDiff: %d. Sell option: %s",
                                             symbol.replace("CE", ""), Math.abs(newCeOi - newPeOi), tradeSymbol);
+
+                                    // set trade placed
+                                    // configs.setOiBasedTradePlaced(true); Add code to sell option
+
+                                    // reset
+                                    log.info("Reset oi enabled to false after trade placed for ce/pe of {}", tradeSymbol);
+                                    configs.getOiTradeMap().put(symbol, OiTrade.builder().ceOi(newCeOi)
+                                            .peOi(newPeOi).eligible(false).build());
+
                                     boolean traded = false;
                                     if (LocalDate.now().getDayOfWeek().equals(DayOfWeek.TUESDAY)) {
                                         // finnifty only
@@ -526,13 +535,6 @@ public class OITrackScheduler {
                                         }
                                     }
 
-                                    // set trade placed
-                                    // configs.setOiBasedTradePlaced(true); Add code to sell option
-
-                                    // reset
-                                    log.info("Reset oi enabled to false after trade placed for ce/pe of {}", tradeSymbol);
-                                    configs.getOiTradeMap().put(symbol, OiTrade.builder().ceOi(newCeOi)
-                                            .peOi(newPeOi).eligible(false).build());
                                 }
                                 if (newCeOi > 0 && newPeOi > 0 && diffPercent < finalDiff) {
                                     if (eligible==true) {
@@ -661,15 +663,15 @@ public class OITrackScheduler {
                 }
             }
         }
-        if (symbol.contains("MIDCPNIFTY") && now.isBefore(LocalTime.of(14, 45))) {
+        if ((symbol.contains("MIDCPNIFTY") || symbol.contains("BANKNIFTY")) && now.isBefore(LocalTime.of(14, 40))) {
             log.info("Skipping trade for {} now because of time", symbol);
-        } else if (!configs.getOiBasedTradePlaced() && !symbol.isEmpty() && !symbol.contains("BANKNIFTY")) {
+        } else if (!configs.getOiBasedTradePlaced() && !symbol.isEmpty()) {
             String sellSymbol = configs.getOiTradeMap().get(symbol).getCeOi() > configs.getOiTradeMap().get(symbol).getPeOi()
                     ? symbol : symbol.replace("CE","PE");
             String op = String.format("Max oi based trade is being initiated for symbol %s, total max sum oi %d", sellSymbol, maxOi);
             log.info(op);
             sendMessage.sendMessage(op);
-            placeOrdersForMaxOi(sellSymbol);
+            placeOrders(sellSymbol);
         }
 
         if (now.isAfter(LocalTime.of(14, 31)) && now.isBefore(LocalTime.of(15, 20)) &&
@@ -907,8 +909,8 @@ public class OITrackScheduler {
         }
     }
 
-    double loss2 = 67.0;
-    double loss1 = 32.0;
+    double loss2 = 76.0;
+    double loss1 = 38.0;
 
     double pointSl = 10.0; // if option move opposite these points then at max loss1 happens if 2nd qty not sold
     // if 2nd qty also sold then loss2 may happen

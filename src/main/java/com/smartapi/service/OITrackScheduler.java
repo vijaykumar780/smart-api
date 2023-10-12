@@ -229,7 +229,8 @@ public class OITrackScheduler {
             } catch (Exception exception) {
         }
         // Any change made to from and to time here, should also be made in stop loss scheduler
-        LocalTime localStartTimeMarket = LocalTime.of(13, 15, 0);
+        // Time now is not allowed.
+        LocalTime localStartTimeMarket = LocalTime.of(11, 30, 0);
         LocalTime localEndTime = LocalTime.of(15, 15, 1);
         LocalTime now1 = LocalTime.now();
 
@@ -650,25 +651,51 @@ public class OITrackScheduler {
         // If there is no oi based trade yet then send top 4 max oi strikes on expiry in descending order
         // after 14:35 (This is to done if there is no oi cross over found)
         LocalTime now = LocalTime.now();
-        int maxOi = 0;
-        String symbol = "";
-        if (now.isAfter(LocalTime.of(14, 32))) {
+        int maxOi1 = 0;
+        int maxOi2 = 0;
+        String symbol1 = "";
+        String symbol2 = "";
+        if (now.isAfter(LocalTime.of(14, 35))) {
             for (Map.Entry<String, OiTrade> entry : configs.getOiTradeMap().entrySet()) {
                 if (entry.getKey().contains(today)) { // expiry
                     int oi = entry.getValue().getCeOi() + entry.getValue().getPeOi();
-                    if (oi>maxOi) {
-                        maxOi = oi;
-                        symbol = entry.getKey();
+                    if (oi>maxOi1 && oi>maxOi2) {
+                        maxOi2 = maxOi1;
+                        maxOi1 = oi;
+
+                        symbol2 = symbol1;
+                        symbol1 = entry.getKey();
+                    } else if (oi > maxOi2 && oi < maxOi1) {
+                        maxOi2 = oi;
+                        symbol2 = entry.getKey();
+                    } else {
+
                     }
                 }
             }
         }
-        if ((symbol.contains("MIDCPNIFTY") || symbol.contains("BANKNIFTY")) && now.isBefore(LocalTime.of(14, 40))) {
+
+        /*if ((symbol.contains("MIDCPNIFTY") || symbol.contains("BANKNIFTY")) && now.isBefore(LocalTime.of(14, 40))) {
             log.info("Skipping trade for {} now because of time", symbol);
-        } else if (!configs.getOiBasedTradePlaced() && !symbol.isEmpty()) {
+        } else
+        */
+        String symbol = "";
+        if (maxOi1 > 0 && maxOi2 > 0) {
+            int diff1 = Math.abs(configs.getOiTradeMap().get(symbol1).getCeOi() - configs.getOiTradeMap().get(symbol1).getPeOi());
+            int diff2 = Math.abs(configs.getOiTradeMap().get(symbol2).getCeOi() - configs.getOiTradeMap().get(symbol2).getPeOi());
+
+            if (diff2 > diff1) {
+                symbol = symbol2;
+            } else {
+                symbol = symbol1;
+            }
+        }
+
+        if (!configs.getOiBasedTradePlaced() && !symbol.isEmpty()) {
+
             String sellSymbol = configs.getOiTradeMap().get(symbol).getCeOi() > configs.getOiTradeMap().get(symbol).getPeOi()
                     ? symbol : symbol.replace("CE","PE");
-            String op = String.format("Max oi based trade is being initiated for symbol %s, total max sum oi %d", sellSymbol, maxOi);
+            String op = String.format("Max oi based trade is being initiated for symbol %s", sellSymbol);
             log.info(op);
             sendMessage.sendMessage(op);
             placeOrders(sellSymbol);
@@ -724,8 +751,8 @@ public class OITrackScheduler {
         }
         return false;
     }
-    double p1 = 22.0;
-    double p2 = 15.0;
+    double p1 = 25.0;
+    double p2 = 17.0;
 
     public void placeOrders(String tradeSymbol) throws Exception {
         String opt = "";
@@ -985,11 +1012,11 @@ public class OITrackScheduler {
 
             Double ltpLimit;
             if (indexName.equals("MIDCPNIFTY")) {
-                ltpLimit = 10.0;
+                ltpLimit = 13.0;
             } else if (indexName.equals("BANKNIFTY")) {
-                ltpLimit = 35.0;
+                ltpLimit = 40.0;
             } else {
-                ltpLimit = 22.0;
+                ltpLimit = 25.0;
             }
             log.info("Ltp limit {}", ltpLimit);
 

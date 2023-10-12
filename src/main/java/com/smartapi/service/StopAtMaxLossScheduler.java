@@ -157,7 +157,7 @@ public class StopAtMaxLossScheduler {
             }
         }
         boolean isTradeAllowed = true;
-        if (now.isAfter(LocalTime.of(9,15)) && now.isBefore(LocalTime.of(13,15)) && mtm != 0.00) {
+        if (now.isAfter(LocalTime.of(9,15)) && now.isBefore(LocalTime.of(11,28)) && mtm != 0.00) {
             isTradeAllowed = false;
             String opt = "Check manually if all trades close. Time now is not allowed. Trade after 12:45";
             log.info(opt);

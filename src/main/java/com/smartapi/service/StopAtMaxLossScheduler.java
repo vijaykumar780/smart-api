@@ -585,7 +585,7 @@ public class StopAtMaxLossScheduler {
                     if (pos != null && !pos.optString("netqty").equals("0")) {
                         if (configs.getTradedOptions() != null && !configs.getTradedOptions().isEmpty()
                         && !configs.getTradedOptions().contains(pos.optString("tradingsymbol"))
-                        && now.isBefore(LocalTime.of(15, 4))) {
+                        && now.isBefore(LocalTime.of(15, 25))) {
                             manualTradePlaced = true;
                         }
                     }

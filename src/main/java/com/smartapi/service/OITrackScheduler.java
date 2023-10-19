@@ -249,7 +249,10 @@ public class OITrackScheduler {
             bankNiftyLtp = getOi("99926009", "NSE");
 
             finniftyLtp = getOi("99926037", "NSE");
-            midcapLtp = configs.getMidcapNiftyValue();
+            midcapLtp = getOi("99926074", "NSE");
+            if (midcapLtp == -1) {
+                midcapLtp = configs.getMidcapNiftyValue();
+            }
             log.info("Using rough index values nifty: {}, finnifty: {}, midcapnifty {}, BankNifty {}. Nifty exp {}, fnnifty exp {}, midcap exp {}, BankNifty exp {}",
                     niftyLtp, finniftyLtp, midcapLtp, bankNiftyLtp, expiryDateNifty, expiryDateFinNifty, expiryDateMidcapNifty, expiryDateBankNifty);
             if (configs.getTradedOptions()!=null && !configs.getTradedOptions().isEmpty()) {
@@ -269,7 +272,7 @@ public class OITrackScheduler {
         int oi;
         int niftyDiff = 500; // index value diff
         int finniftyDiff = 500;
-        int midcapDiff = 1000;
+        int midcapDiff = 600;
         int bankNiftyDiff = 800;
 
         StringBuilder email = new StringBuilder();

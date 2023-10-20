@@ -215,8 +215,8 @@ public class OITrackScheduler {
         today = today.substring(0,5) + today.substring(7);
         today = today.toUpperCase();
         try {
-            log.info("Configs used currently for oi based trade.oiPercent: {}, oiBasedTradeEnabled: {}, oiBasedTradePlaced {}, midcapQty {}, " +
-                            "Nifty qty {}, Finnifty Qty {}, Banknifty qty {}, Today {}, maxLoss Limit {}, symbolsLoaded {}",
+            log.info("Configs used currently for oi based trade.oiPercent: {}\n oiBasedTradeEnabled: {}\n oiBasedTradePlaced {}\n midcapQty {}\n " +
+                            "Nifty qty {}\n Finnifty Qty {}\n Banknifty qty {}\n Today {}\n maxLoss Limit {}\n symbolsLoaded {}\n",
                     configs.getOiPercent(),
                     configs.isOiBasedTradeEnabled(),
                     configs.getOiBasedTradePlaced(),
@@ -253,10 +253,10 @@ public class OITrackScheduler {
             if (midcapLtp == -1) {
                 midcapLtp = configs.getMidcapNiftyValue();
             }
-            log.info("Using rough index values nifty: {}, finnifty: {}, midcapnifty {}, BankNifty {}. Nifty exp {}, fnnifty exp {}, midcap exp {}, BankNifty exp {}",
+            log.info("Index values nifty: {}\n finnifty: {}\n midcapnifty {}\n BankNifty {}\n Nifty exp {}\n fnnifty exp {}\n midcap exp {}\n BankNifty exp {}\n",
                     niftyLtp, finniftyLtp, midcapLtp, bankNiftyLtp, expiryDateNifty, expiryDateFinNifty, expiryDateMidcapNifty, expiryDateBankNifty);
             if (configs.getTradedOptions()!=null && !configs.getTradedOptions().isEmpty()) {
-                log.info("Traded options");
+                log.info("Traded options\n");
                 for (String str : configs.getTradedOptions()) {
                     log.info(str);
                 }
@@ -307,7 +307,7 @@ public class OITrackScheduler {
                             email.append(response);
                             email.append("\n\n");
                         } else if ((Math.abs(changePercent) >= configs.getOiPercent())) {
-                            log.info("{} has change % above oi percent. percent {}", symbolData.getSymbol(), changePercent);
+                            log.info("{} has change % above oi percent. percent {}\n", symbolData.getSymbol(), changePercent);
                         }
                         oiMap.put(symbolData.getSymbol(), oi);
                         //log.info("OI Data | {}", response);
@@ -345,7 +345,7 @@ public class OITrackScheduler {
                             email.append(response);
                             email.append("\n\n");
                         } else if ((Math.abs(changePercent) >= configs.getOiPercent())) {
-                            log.info("{} has change % above oi percent. Percent {}", symbolData.getSymbol(), changePercent);
+                            log.info("{} has change % above oi percent. Percent {}\n", symbolData.getSymbol(), changePercent);
                         }
                         oiMap.put(symbolData.getSymbol(), oi);
                         //log.info("OI Data | {}", response);
@@ -384,7 +384,7 @@ public class OITrackScheduler {
                             email.append(response);
                             email.append("\n\n");
                         } else if ((Math.abs(changePercent) >= configs.getOiPercent())) {
-                            log.info("{} has change % above oi percent. percent {}", symbolData.getSymbol(), changePercent);
+                            log.info("{} has change % above oi percent. percent {}\n", symbolData.getSymbol(), changePercent);
                         }
                         oiMap.put(symbolData.getSymbol(), oi);
                         //log.info("OI Data | {}", response);
@@ -422,7 +422,7 @@ public class OITrackScheduler {
                             email.append(response);
                             email.append("\n\n");
                         } else if ((Math.abs(changePercent) >= configs.getOiPercent())) {
-                            log.info("{} has change % above oi percent. percent {}", symbolData.getSymbol(), changePercent);
+                            log.info("{} has change % above oi percent. percent {}\n", symbolData.getSymbol(), changePercent);
                         }
                         oiMap.put(symbolData.getSymbol(), oi);
                         //log.info("OI Data | {}", response);
@@ -474,7 +474,7 @@ public class OITrackScheduler {
                                 bigeligible = true;
                             }
                             if (bigeligible) {
-                                log.info("Big eligible found true for symbol {}", symbol);
+                                log.info("Big eligible found true for symbol {}\n", symbol);
                             }
                             if (eligible || bigeligible) {
                                 if (diffPercent >= finalDiff) {
@@ -486,7 +486,7 @@ public class OITrackScheduler {
                                     // configs.setOiBasedTradePlaced(true); Add code to sell option
 
                                     // reset
-                                    log.info("Reset oi enabled to false after trade placed for ce/pe of {}", tradeSymbol);
+                                    log.info("Reset oi enabled to false after trade placed for ce/pe of {}\n", tradeSymbol);
                                     configs.getOiTradeMap().put(symbol, OiTrade.builder().ceOi(newCeOi)
                                             .peOi(newPeOi).eligible(false).build());
 
@@ -546,7 +546,7 @@ public class OITrackScheduler {
                                     } else if (diffPercent <= diffInitial) {
                                         eligible = true;
                                     }
-                                    log.info("Oi updated for {} with enabled {}", symbol, eligible);
+                                    log.info("Oi updated for {} with enabled {}\n", symbol, eligible);
                                     configs.getOiTradeMap().put(symbol, OiTrade.builder().ceOi(newCeOi)
                                             .peOi(newPeOi).eligible(eligible).build());
                                 }
@@ -576,21 +576,21 @@ public class OITrackScheduler {
                             if (diffPercent <= diffInitial) {
                                 eligible = true;
                             }
-                            log.info("Symbol {} stored in map", symbol);
+                            log.info("Symbol {} stored in map\n", symbol);
                             configs.getOiTradeMap().put(symbol, OiTrade.builder().ceOi(ceOi)
                                     .peOi(peOi).eligible(eligible).build());
                         }
                     }
                 }
             } catch (Exception e) {
-                log.error("Error occurred in processing strike: {}", entry.getKey(), e);
+                log.error("Error occurred in processing strike: {}\n", entry.getKey(), e);
             }
         }
-        log.info("Oi based trade Map");
+        log.info("Oi based trade Map\n");
         printOiMap(today);
 
         trackMaxOiMail(today);
-        log.info("Finished tracking oi based trade");
+        log.info("Finished tracking oi based trade\n");
         System.gc();
     }
 
@@ -605,7 +605,7 @@ public class OITrackScheduler {
         result.sort(String::compareTo);
         for (j=0;j<result.size();j++) {
             if (result.get(j).contains(today)) {
-                log.info("{} : {}", result.get(j), configs.getOiTradeMap().get(result.get(j)));
+                log.info("{} : {}\n", result.get(j), configs.getOiTradeMap().get(result.get(j)));
             }
         }
         result.clear();
@@ -618,7 +618,7 @@ public class OITrackScheduler {
         result.sort(String::compareTo);
         for (j=0;j<result.size();j++) {
             if (result.get(j).contains(today)) {
-                log.info("{} : {}", result.get(j), configs.getOiTradeMap().get(result.get(j)));
+                log.info("{} : {}\n", result.get(j), configs.getOiTradeMap().get(result.get(j)));
             }
         }
         result.clear();
@@ -631,7 +631,7 @@ public class OITrackScheduler {
         result.sort(String::compareTo);
         for (j=0;j<result.size();j++) {
             if (result.get(j).contains(today)) {
-                log.info("{} : {}", result.get(j), configs.getOiTradeMap().get(result.get(j)));
+                log.info("{} : {}\n", result.get(j), configs.getOiTradeMap().get(result.get(j)));
             }
         }
         result.clear();
@@ -644,7 +644,7 @@ public class OITrackScheduler {
         result.sort(String::compareTo);
         for (j=0;j<result.size();j++) {
             if (result.get(j).contains(today)) {
-                log.info("{} : {}", result.get(j), configs.getOiTradeMap().get(result.get(j)));
+                log.info("{} : {}\n", result.get(j), configs.getOiTradeMap().get(result.get(j)));
             }
         }
         result.clear();
@@ -723,7 +723,7 @@ public class OITrackScheduler {
                 emailContent.append(getOiContent(sortedOptData.get(2), today));
                 emailContent.append(getOiContent(sortedOptData.get(3), today));
 
-                log.info("Max oi data: {}", emailContent.toString());
+                log.info("Max oi data: {}\n", emailContent.toString());
                 sendMessage.sendMessage(emailContent.toString());
             }
         }
@@ -735,13 +735,13 @@ public class OITrackScheduler {
                 .substring(todayindex+7) + " : " + optionData.getOi() + "\n";
     }
 
-    private int getOiTestData(String symbol) {
+    private int getOiTestData(int oi) {
         if (ceCount == 0) {
             ceCount++;
-            return 0;
+            return oi;
         } else if (ceCount == 1) {
             ceCount++;
-            return 309750;
+            return 8400000;
         } else {
             ceCount++;
             return 435435343;
@@ -828,12 +828,12 @@ public class OITrackScheduler {
             } else {
                 lotSize = configs.getFinniftyLotSize();
             }
-            log.info("Max Qty {}. Index {}. Tradable Qty {}, LotSize {}", maxQty, indexName, qty, lotSize);
+            log.info("Max Qty {}. Index {}. Tradable Qty {}, LotSize {}\n", maxQty, indexName, qty, lotSize);
 
             int fullBatches = qty / maxQty;
             int remainingQty = qty % maxQty;
             remainingQty = (remainingQty % (int) lotSize == 0) ? remainingQty : remainingQty - (remainingQty % (int) lotSize);
-            log.info("Trade Details: strikediff {}, price1 {}%, price2 {}%, total qty {}", strikeDiff, p1, p2, qty);
+            log.info("Trade Details: strikediff {}, price1 {}%, price2 {}%, price3 {}%, total qty {}\n", strikeDiff, p1, p2, p3, qty);
             SymbolData buySymbolData;
 
             String optionType = tradeSymbol.endsWith("CE") ? "CE" : "PE";
@@ -907,7 +907,7 @@ public class OITrackScheduler {
             List<Integer> qtys3 = getQtyList(intq3, maxQty, lotSize);
             List<Integer> qtys4 = getQtyList(intq4, maxQty, lotSize);
 
-            log.info("Trade Details: Q1 {}, Q2 {}, Q3 {}, Q4 {} p1 {}, p2 {}, p3 {}, p4 {}",
+            log.info("Trade Details: Q1 {}, Q2 {}, Q3 {}, Q4 {} p1 {}, p2 {}, p3 {}, p4 {}\n",
                     intq1, intq2, intq3, intq4, sellLtp, trg1, trg2, trg3);
 
             Order sellOrder;
@@ -966,7 +966,7 @@ public class OITrackScheduler {
 
             configs.setOiBasedTradePlaced(true);
         } else {
-            log.info("Trade found but oi based trade not enabled or trade already placed. Check if manual trade required. Sell {}", tradeSymbol);
+            log.info("Trade found but oi based trade not enabled or trade already placed. Check if manual trade required. Sell {}\n", tradeSymbol);
             sendMessage.sendMessage("Trade found but oi based trade not enabled or trade already placed. Check if manual trade required. Sell " + tradeSymbol);
             sendMessage.sendMessage("Sell symbol " + fetchSellSymbol(tradeSymbol));
         }

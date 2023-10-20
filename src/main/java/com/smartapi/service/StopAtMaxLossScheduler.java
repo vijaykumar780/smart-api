@@ -98,7 +98,7 @@ public class StopAtMaxLossScheduler {
         LocalTime localEndTimeMarket = LocalTime.of(15,30,1);
         LocalTime now = LocalTime.now();
         if (!(now.isAfter(localStartTimeMarket) && now.isBefore(localEndTime))) {
-            log.info("Current time {} is beyond range {} to {}. Threshold: {} [As per exp / non exp]", now, localStartTimeMarket, localEndTime, maxLossAmount);
+            log.info("Current time {} is beyond range {} to {}. Threshold: {} [As per exp / non exp]\n", now, localStartTimeMarket, localEndTime, maxLossAmount);
             return;
         }
         if (historySmartConnect == null || tradingSmartConnect == null || marketSmartConnect ==null) {
@@ -118,7 +118,7 @@ public class StopAtMaxLossScheduler {
 
         JSONArray positionsJsonArray = jsonObject.optJSONArray("data");
         if (positionsJsonArray == null || positionsJsonArray.isEmpty()) {
-            log.info("Empty positions, skipping");
+            log.info("Empty positions, skipping\n");
             return;
         }
 
@@ -159,7 +159,7 @@ public class StopAtMaxLossScheduler {
         boolean isTradeAllowed = true;
         if (now.isAfter(LocalTime.of(9,15)) && now.isBefore(LocalTime.of(11,28)) && mtm != 0.00) {
             isTradeAllowed = false;
-            String opt = "Check manually if all trades close. Time now is not allowed. Trade after 12:45";
+            String opt = "Check manually if all trades close. Time now is not allowed. Trade after 11:28";
             log.info(opt);
             //sendMail(opt);
         }
@@ -174,47 +174,47 @@ public class StopAtMaxLossScheduler {
 
         if ((mtm <= 0 && Math.abs(mtm) >= modifiedMaxLoss) || exitALLFlag ||
                 isExitAllPosRequired || !isTradeAllowed) {
-            log.info("Flags exitALLFlag {}, isExitAllPosRequired {}, isExitRequiredForReTradeAtSl {}", exitALLFlag, isExitAllPosRequired, isExitRequiredForReTradeAtSl);
+            log.info("Flags exitALLFlag {}, isExitAllPosRequired {}, isExitRequiredForReTradeAtSl {}\n", exitALLFlag, isExitAllPosRequired, isExitRequiredForReTradeAtSl);
             if (mtm>0.0) {
                 sendMail("[SL] Max Profit reached. Profit: " + mtm);
-                log.info("Max Profit reached. Profit {}, starting to close all pos.", mtm);
+                log.info("Max Profit reached. Profit {}, starting to close all pos.\n", mtm);
             } else {
                 sendMail("[SL] Max MTM loss reached. Loss: " + mtm + " Threshold: " + modifiedMaxLoss);
-                log.info("Max MTM loss reached. Loss {}. maxLossAmount {}, starting to close all pos.", mtm, modifiedMaxLoss);
+                log.info("Max MTM loss reached. Loss {}. maxLossAmount {}, starting to close all pos.\n", mtm, modifiedMaxLoss);
             }
             try {
-                log.info("Fetched orders {}", ordersJsonArray.toString());
-                log.info("Fetched positions {}", positionsJsonArray.toString());
+                log.info("Fetched orders {}\n", ordersJsonArray.toString());
+                log.info("Fetched positions {}\n", positionsJsonArray.toString());
             } catch (Exception e) {
 
             }
 
             if (ordersJsonArray == null || ordersJsonArray.length()==0) {
-                log.info("Orders array empty");
+                log.info("Orders array empty\n");
             } else {
                 for (int i = 0; i < ordersJsonArray.length(); i++) {
                     JSONObject order = ordersJsonArray.optJSONObject(i);
                     if ("open".equals(order.optString("status")) || "trigger pending".equals(order.optString("status"))) {
-                        log.info("Cancelling order {}. Symbol {}", order.optString("orderid"), order.optString("tradingsymbol"));
+                        log.info("Cancelling order {}. Symbol {}\n", order.optString("orderid"), order.optString("tradingsymbol"));
                         Order cancelOrder = tradingSmartConnect.cancelOrder(order.optString("orderid"), order.optString("variety"));
                         if (cancelOrder == null) {
-                            log.info("Retry cancel order");
+                            log.info("Retry cancel order\n");
                             Thread.sleep(100);
                             cancelOrder = tradingSmartConnect.cancelOrder(order.optString("orderid"), order.optString("variety"));
                         }
                         Thread.sleep(100);
-                        log.info("Cancelled order {}. Symbol {}. Order {}", order.optString("orderid"), order.optString("tradingsymbol"), cancelOrder);
+                        log.info("Cancelled order {}. Symbol {}. Order {}\n", order.optString("orderid"), order.optString("tradingsymbol"), cancelOrder);
                     }
                 }
             }
             if (positionsJsonArray == null || positionsJsonArray.length()==0) {
-                log.info("Empty positions, skipping");
+                log.info("Empty positions, skipping\n");
                 return;
             }
 
             JSONArray updatedPosArray = getUpdatedPosArray(positionsJsonArray);
-            log.info("Trying to close all open positions: {}", updatedPosArray.length());
-            sendMail("[SL] Trying to close all open positions: {}");
+            log.info("Trying to close all open positions: {}\n", updatedPosArray.length());
+            sendMail("[SL] Trying to close all open positions: {}\n");
             for (int k = 0; k < updatedPosArray.length(); k++) {
                 JSONObject pos = updatedPosArray.optJSONObject(k);
                 log.info("Pos {}", pos.toString());
@@ -249,11 +249,11 @@ public class StopAtMaxLossScheduler {
                                     order = tradingSmartConnect.placeOrder(buyOrderParams, Constants.VARIETY_NORMAL);
                                 } catch (Exception | SmartAPIException e) {
                                     order = null;
-                                    log.error("Error in placing order for {}", pos.optString("symboltoken"), e);
+                                    log.error("Error in placing order for {}\n", pos.optString("symboltoken"), e);
                                 }
 
                                 if (order == null) {
-                                    log.info("Buy order failed to processed, retrying");
+                                    log.info("Buy order failed to processed, retrying\n");
                                     init();
                                     try {
                                         Thread.sleep(100);
@@ -263,11 +263,11 @@ public class StopAtMaxLossScheduler {
                                     try {
                                         order = tradingSmartConnect.placeOrder(buyOrderParams, Constants.VARIETY_NORMAL);
                                     } catch (Exception | SmartAPIException e) {
-                                        log.error("Error in placing order for {}", pos.optString("symboltoken"), e);
+                                        log.error("Error in placing order for {}\n", pos.optString("symboltoken"), e);
                                     }
                                 }
                                 Thread.sleep(100);
-                                log.info("Order placed to close pos {}", order);
+                                log.info("Order placed to close pos {}\n", order);
                                 try {
                                     List<String> symbolsExitedFromScheduler = configs.getSymbolExitedFromScheduler();
                                     symbolsExitedFromScheduler.add(pos.optString("tradingsymbol"));
@@ -337,17 +337,17 @@ public class StopAtMaxLossScheduler {
                     }
                 }
             }
-            log.info("[Probable closed all positions]. Validate manually");
-            sendMail("[SL] [Probable closed all positions]. Validate manually");
+            log.info("[Probable closed all positions]. Validate manually\n");
+            sendMail("[SL] [Probable closed all positions]. Validate manually\n");
             try {
                 configs.setMaxLossEmailCount(configs.getMaxLossEmailCount() - 1);
                 configs.setSlHitSmsSent(true);
             } catch (Exception e) {
-                log.error("Error in updating configs with sl hit");
+                log.error("Error in updating configs with sl hit\n");
             }
 
         } else {
-            log.info("[Max loss tracker]. Threshold: {}, MTM {}, Max Profit possible {} at time {}", maxLossAmount, mtm, sellamount - buyamount,  now);
+            log.info("[Max loss tracker]. Threshold: {}, MTM {}, Max Profit possible {} at time {}\n", maxLossAmount, mtm, sellamount - buyamount,  now);
         }
     }
 

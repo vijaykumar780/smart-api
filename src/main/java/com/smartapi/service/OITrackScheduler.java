@@ -701,7 +701,8 @@ public class OITrackScheduler {
             String op = String.format("Max oi based trade is being initiated for symbol %s", sellSymbol);
             log.info(op);
             sendMessage.sendMessage(op);
-            placeOrders(sellSymbol);
+            //placeOrders(sellSymbol);
+            placeOrdersForMaxOi(sellSymbol);
         }
 
         if (now.isAfter(LocalTime.of(14, 31)) && now.isBefore(LocalTime.of(15, 20)) &&
@@ -756,6 +757,7 @@ public class OITrackScheduler {
     }
     double p1 = 25.0;
     double p2 = 17.0;
+    double p3 = 20.0;
 
     public void placeOrders(String tradeSymbol) throws Exception {
         String opt = "";
@@ -876,21 +878,38 @@ public class OITrackScheduler {
             q1 = q1 / lotSize;
             q2 = q2 / lotSize;
             //log.info("Q1 {}, Q2 {}", q1, q2);
-            int intq1, intq2, intq3;
-            intq1 = (int) q1 * (int) lotSize;
-            intq2 = (int) q2 * (int) lotSize;
-            intq3 = qty - intq1 - intq2;
-
             Double trg1 = sellLtp - (sellLtp * p1) / 100.0;
             Double trg2 = trg1 - (trg1 * p2) / 100.0;
-            log.info("Trade Details: intq1 {}, intq2 {}, intq3 {}, trg1 {}, trg2 {}", intq1, intq2, intq3, trg1, trg2);
-            List<Integer> qtys1 = getQtyList(intq1, maxQty, lotSize);
+            Double trg3 = trg2 - (trg2 * p3) / 100.0;
+
+            q3 = getQ3Abs(maxLoss, sellLtp, trg1, trg2);
+            q3 = q3 / lotSize;
+
+            int intq1, intq2, intq3, intq4;
+            intq1 = (int) q1 * (int) lotSize;
+            intq2 = (int) q2 * (int) lotSize;
+            intq3 = (int) q3 * (int) lotSize;
+
+            intq4 = qty - intq1 - intq2 - intq3;
+
             if (intq1+intq2>qty) {
                 log.info("Adjusting Qty2");
                 intq2 = qty - intq1;
+            } else if (intq1+intq2+intq3>qty) {
+                log.info("Adjusting Qty3");
+                intq3 = qty - intq1 - intq2;
+            } else if (intq1+intq2+intq3+intq4>qty) {
+                log.info("Adjusting Qty4");
+                intq4 = qty - intq1 - intq2 - intq3;
             }
+            List<Integer> qtys1 = getQtyList(intq1, maxQty, lotSize);
             List<Integer> qtys2 = getQtyList(intq2, maxQty, lotSize);
             List<Integer> qtys3 = getQtyList(intq3, maxQty, lotSize);
+            List<Integer> qtys4 = getQtyList(intq4, maxQty, lotSize);
+
+            log.info("Trade Details: Q1 {}, Q2 {}, Q3 {}, Q4 {} p1 {}, p2 {}, p3 {}, p4 {}",
+                    intq1, intq2, intq3, intq4, sellLtp, trg1, trg2, trg3);
+
             Order sellOrder;
 
             for (Integer qt : qtys1) {
@@ -931,6 +950,20 @@ public class OITrackScheduler {
                     sendMessage.sendMessage(opt);
                 }
             }
+
+            for (Integer qt : qtys4) {
+                sellOrder = stopAtMaxLossScheduler.placeOrder(sellSymbolData.getSymbol(), sellSymbolData.getToken(), sellLtp, qt, Constants.TRANSACTION_TYPE_SELL, trg3);
+                if (sellOrder != null) {
+                    opt = String.format("Sell order placed for %s, qty %d. Trigger price %f", sellSymbolData.getSymbol(), qt, trg3);
+                    log.info(opt);
+                    sendMessage.sendMessage(opt);
+                } else {
+                    opt = String.format("Sell order failed for %s, qty %d. Trigger price %f", sellSymbolData.getSymbol(), qt, trg3);
+                    log.info(opt);
+                    sendMessage.sendMessage(opt);
+                }
+            }
+
             configs.setOiBasedTradePlaced(true);
         } else {
             log.info("Trade found but oi based trade not enabled or trade already placed. Check if manual trade required. Sell {}", tradeSymbol);
@@ -947,12 +980,20 @@ public class OITrackScheduler {
 
     private double getQ2Abs(double maxLoss, Double sellLtp) {
 
-        return (((loss2/100.0)*maxLoss)-((loss1/100.0)*maxLoss))/(pointSl+ ((sellLtp*p1)/100.0));
+        return (((loss2 / 100.0) * maxLoss) - ((loss1 / 100.0) * maxLoss)) / (pointSl + ((sellLtp * p1) / 100.0));
     }
 
     private double getQ1Abs(double maxLoss) {
 
-        return (loss1/1000.0)*maxLoss;
+        return (loss1 / 1000.0) * maxLoss;
+    }
+
+    private double getQ3Abs(double maxLoss, Double sellLtp, Double trg1, Double trg2) {
+        double q2 = (((loss2 / 100.0) * maxLoss) - ((loss1 / 100.0) * maxLoss)) / (pointSl + ((sellLtp * p1) / 100.0));
+        double q1 = (loss1 / 1000.0) * maxLoss;
+        double p = trg2 + pointSl + 4.0;
+
+        return (maxLoss - (p * q1) + (q1 * sellLtp) - (p * q2) + (q2 * trg1)) / (p - trg2);
     }
 
     private List<Integer> getQtyList(int qty, int maxQty, double lotSize) {

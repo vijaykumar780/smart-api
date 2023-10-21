@@ -44,10 +44,24 @@ public class OITrackScheduler {
     private String marketDataUrl = "https://apiconnect.angelbroking.com/rest/secure/angelbroking/market/v1/quote/";
 
     // oi based trade
-    double diffInitial = 6.0;
+    double diffInitial = 7.0;
     double finalDiff = 13.0;
 
+    // Price for multiple sell trades
+    double p1 = 25.0;
+    double p2 = 17.0;
+    double p3 = 20.0;
+
+    // loss percents
+    double loss2 = 76.0;
+    double loss1 = 38.0;
+
+    double pointSl = 10.0; // if option move opposite these points then at max loss1 happens if 2nd qty not sold
+    // if 2nd qty also sold then loss2 may happen
+
+    // testing
     int ceCount = 0;
+
     int peCount = 0;
 
     @Scheduled(cron = "0 50 8 * * ?")
@@ -319,7 +333,8 @@ public class OITrackScheduler {
                         //log.info("OI Data | {}", response);
                     }
 
-                } else if (symbolData.getName().equals("FINNIFTY") && expiryDateFinNifty.equals(symbolData.getExpiry()) && Math.abs(symbolData.getStrike() - finniftyLtp) <= finniftyDiff) {
+                } else if (symbolData.getName().equals("FINNIFTY") && (expiryDateFinNifty.equals(symbolData.getExpiry()) || getExpiryDate(DayOfWeek.MONDAY).equals(symbolData.getExpiry()))
+                        && Math.abs(symbolData.getStrike() - finniftyLtp) <= finniftyDiff) {
                     String name = "";
                     name = name + "FINNIFTY_";
                     name = name + symbolData.getStrike() + "_" + (symbolData.getSymbol().endsWith("CE") ? "CE" : "PE");
@@ -395,7 +410,8 @@ public class OITrackScheduler {
 
                         //log.info("OI Data | {}", response);
                     }
-                } else if (symbolData.getName().equals("BANKNIFTY") && expiryDateBankNifty.equals(symbolData.getExpiry()) && Math.abs(symbolData.getStrike() - bankNiftyLtp) <= bankNiftyDiff) {
+                } else if (symbolData.getName().equals("BANKNIFTY") && (expiryDateBankNifty.equals(symbolData.getExpiry()) || getExpiryDate(DayOfWeek.TUESDAY).equals(symbolData.getExpiry()))
+                        && Math.abs(symbolData.getStrike() - bankNiftyLtp) <= bankNiftyDiff) {
                     String name = "";
                     name = name + "BANKNIFTY_";
                     name = name + symbolData.getStrike() + "_" + (symbolData.getSymbol().endsWith("CE") ? "CE" : "PE");
@@ -499,6 +515,11 @@ public class OITrackScheduler {
 
                                             placeOrders(tradeSymbol);
                                             traded = true;
+                                        } else if (symbol.contains(today) && symbol.startsWith("BANKNIFTY")) { // BANKNIFTY
+                                            log.info(opt);
+                                            sendMessage.sendMessage(opt);
+                                            placeOrders(tradeSymbol);
+                                            traded = true;
                                         }
                                     } else if (LocalDate.now().getDayOfWeek().equals(DayOfWeek.THURSDAY)) {
                                         // nifty only
@@ -513,6 +534,12 @@ public class OITrackScheduler {
                                         if (symbol.startsWith("MIDCPNIFTY")) { // MIDCPNIFTY
                                             log.info(opt);
                                             sendMessage.sendMessage(opt);
+                                            placeOrders(tradeSymbol);
+                                            traded = true;
+                                        } else if (symbol.contains(today) && symbol.contains("FINNIFTY")) {
+                                            log.info(opt);
+                                            sendMessage.sendMessage(opt);
+
                                             placeOrders(tradeSymbol);
                                             traded = true;
                                         }
@@ -538,7 +565,6 @@ public class OITrackScheduler {
                                             traded = true;
                                         }
                                     }
-
                                 }
                                 if (newCeOi > 0 && newPeOi > 0 && diffPercent < finalDiff) {
                                     if (eligible==true) {
@@ -755,9 +781,6 @@ public class OITrackScheduler {
         }
         return false;
     }
-    double p1 = 25.0;
-    double p2 = 17.0;
-    double p3 = 20.0;
 
     public void placeOrders(String tradeSymbol) throws Exception {
         String opt = "";
@@ -971,12 +994,6 @@ public class OITrackScheduler {
             sendMessage.sendMessage("Sell symbol " + fetchSellSymbol(tradeSymbol));
         }
     }
-
-    double loss2 = 76.0;
-    double loss1 = 38.0;
-
-    double pointSl = 10.0; // if option move opposite these points then at max loss1 happens if 2nd qty not sold
-    // if 2nd qty also sold then loss2 may happen
 
     private double getQ2Abs(double maxLoss, Double sellLtp) {
 

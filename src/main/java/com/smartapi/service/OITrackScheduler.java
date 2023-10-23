@@ -64,6 +64,9 @@ public class OITrackScheduler {
 
     int peCount = 0;
 
+    // Due to volatility keep disable midcp nifty cross over trade
+    boolean isMidcpNiftyOiCrossTradeEnabled = false;
+
     @Scheduled(cron = "0 50 8 * * ?")
     public void reInitEmail() {
         int success = 0;
@@ -531,7 +534,7 @@ public class OITrackScheduler {
                                         }
                                     } else if (LocalDate.now().getDayOfWeek().equals(DayOfWeek.MONDAY)) {
                                         // nifty only
-                                        if (symbol.startsWith("MIDCPNIFTY")) { // MIDCPNIFTY
+                                        if (symbol.startsWith("MIDCPNIFTY") && isMidcpNiftyOiCrossTradeEnabled) { // MIDCPNIFTY
                                             log.info(opt);
                                             sendMessage.sendMessage(opt);
                                             placeOrders(tradeSymbol);
@@ -558,7 +561,7 @@ public class OITrackScheduler {
                                         }
                                     } else if (LocalDate.now().getDayOfWeek().equals(DayOfWeek.FRIDAY)) {
                                         // nifty only
-                                        if (symbol.contains(today) && symbol.startsWith("MIDCPNIFTY")) { // MIDCPNIFTY
+                                        if (symbol.contains(today) && symbol.startsWith("MIDCPNIFTY") && isMidcpNiftyOiCrossTradeEnabled) { // MIDCPNIFTY
                                             log.info(opt);
                                             sendMessage.sendMessage(opt);
                                             placeOrders(tradeSymbol);
@@ -684,7 +687,7 @@ public class OITrackScheduler {
         int maxOi2 = 0;
         String symbol1 = "";
         String symbol2 = "";
-        if (now.isAfter(LocalTime.of(14, 35))) {
+        if (now.isAfter(LocalTime.of(14, 28))) {
             for (Map.Entry<String, OiTrade> entry : configs.getOiTradeMap().entrySet()) {
                 if (entry.getKey().contains(today)) { // expiry
                     int oi = entry.getValue().getCeOi() + entry.getValue().getPeOi();
@@ -728,7 +731,11 @@ public class OITrackScheduler {
             log.info(op);
             sendMessage.sendMessage(op);
             //placeOrders(sellSymbol);
-            placeOrdersForMaxOi(sellSymbol);
+            if (sellSymbol.contains("MIDCPNIFTY")) {
+                placeOrdersForMaxOi(sellSymbol);
+            } else {
+                placeOrders(sellSymbol);
+            }
         }
 
         if (now.isAfter(LocalTime.of(14, 31)) && now.isBefore(LocalTime.of(15, 20)) &&

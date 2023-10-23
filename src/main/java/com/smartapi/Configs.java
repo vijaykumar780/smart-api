@@ -138,6 +138,13 @@ public class Configs {
 	List<String> totps = new ArrayList<>();
 	private String password = "8080";
     // japantokyo8
+
+	// current Profit or loss
+	int currentPL = 0;
+
+	// max profit
+	int maxProfit = 0;
+
 	@Bean
 	PlacedOrders placedOrders() {
 		return new PlacedOrders();

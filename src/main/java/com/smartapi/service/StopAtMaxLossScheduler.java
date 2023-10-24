@@ -101,7 +101,8 @@ public class StopAtMaxLossScheduler {
         LocalTime localEndTimeMarket = LocalTime.of(15,30,1);
         LocalTime now = LocalTime.now();
         if (!(now.isAfter(localStartTimeMarket) && now.isBefore(localEndTime))) {
-            log.info("Current time {} is beyond range {} to {}. Threshold: {} [As per exp / non exp]\n", now, localStartTimeMarket, localEndTime, maxLossAmount);
+            log.info("Current time {} is beyond range {} to {}. Threshold: {} [As per exp / non exp]\n Max Orders remaining {}\n", now, localStartTimeMarket,
+                    localEndTime, maxLossAmount, configs.getTotalMaxOrdersAllowed());
             return;
         }
         if (historySmartConnect == null || tradingSmartConnect == null || marketSmartConnect ==null) {
@@ -177,7 +178,8 @@ public class StopAtMaxLossScheduler {
 
         if ((mtm <= 0 && Math.abs(mtm) >= modifiedMaxLoss) || exitALLFlag ||
                 isExitAllPosRequired || !isTradeAllowed) {
-            log.info("Flags exitALLFlag {}, isExitAllPosRequired {}, isExitRequiredForReTradeAtSl {}\n", exitALLFlag, isExitAllPosRequired, isExitRequiredForReTradeAtSl);
+            log.info("Flags exitALLFlag {}, isExitAllPosRequired {}, isExitRequiredForReTradeAtSl {}\n Max orders remaing {}", exitALLFlag, isExitAllPosRequired,
+                    isExitRequiredForReTradeAtSl, configs.getTotalMaxOrdersAllowed());
             if (mtm>0.0) {
                 sendMail("[SL] Max Profit reached. Profit: " + mtm);
                 log.info("Max Profit reached. Profit {}, starting to close all pos.\n", mtm);
@@ -191,6 +193,13 @@ public class StopAtMaxLossScheduler {
             } catch (Exception e) {
 
             }
+            int currentOrders = configs.getTotalMaxOrdersAllowed();
+            if (currentOrders < 0) {
+                log.info("Max orders placed, can not place further orders");
+                sendMessage.sendMessage("Max orders placed, can not place further orders");
+                return;
+            }
+            configs.setTotalMaxOrdersAllowed(currentOrders - 1);
 
             if (ordersJsonArray == null || ordersJsonArray.length()==0) {
                 log.info("Orders array empty\n");
@@ -350,7 +359,8 @@ public class StopAtMaxLossScheduler {
             }
 
         } else {
-            log.info("[Max loss tracker]. Threshold: {}, MTM {}, Max Profit possible {} at time {}\n", maxLossAmount, mtm, sellamount - buyamount,  now);
+            log.info("[Max loss tracker]. Threshold: {}, MTM {}, Max Profit possible {} \n Max orders remaining {}\n at time {}\n", maxLossAmount, mtm, sellamount - buyamount,
+                    configs.getTotalMaxOrdersAllowed(), now);
         }
     }
 
@@ -360,12 +370,13 @@ public class StopAtMaxLossScheduler {
                                  JSONArray positionsJsonArray) {
         try {
             double triggerLossForStrictSl = 0.7 * modifiedMaxLoss;
+            double triggerLoss50Percent = 0.5 * modifiedMaxLoss;
             double triggerLossForPreStrictSl = 0.3 * modifiedMaxLoss; // Cut around 30 % of pos after reaching 50 % loss
             // actual order will be placed for 50 % loss
 
             // check for positions taken as max oi diff
-            if (mtm <0 && Math.abs(mtm)>= triggerLossForPreStrictSl && Math.abs(mtm)<= triggerLossForStrictSl) {
-              log.info("Placing pre sl order as loss at current loss of mtm {}, L1 {}, L2 {}", mtm, triggerLossForPreStrictSl, triggerLossForStrictSl);
+            if (mtm <0 && Math.abs(mtm)>= triggerLossForPreStrictSl && Math.abs(mtm)<= triggerLoss50Percent) {
+              log.info("Placing pre sl order as loss at current loss of mtm {}, L1 {}, L2 {}", mtm, triggerLossForPreStrictSl, triggerLoss50Percent);
                 int i;
                 String sellOptionSymbol = "";
                 //String buyOption = "";
@@ -821,6 +832,13 @@ public class StopAtMaxLossScheduler {
 
     public Order placeOrder(String tradeSymbol, String tradeToken, Double price, Integer qty, String transactionType, Double triggerPrice) {
         Order order = null;
+        int currentOrders = configs.getTotalMaxOrdersAllowed();
+        if (currentOrders < 0) {
+            log.info("Max orders placed, can not place further orders");
+            sendMessage.sendMessage("Max orders placed, can not place further orders");
+            return null;
+        }
+        configs.setTotalMaxOrdersAllowed(currentOrders - 1);
 
         OrderParams orderParams = new OrderParams();
         orderParams.variety = Constants.VARIETY_NORMAL;
@@ -829,7 +847,7 @@ public class StopAtMaxLossScheduler {
         orderParams.exchange = "NFO";
         orderParams.ordertype = Constants.ORDER_TYPE_LIMIT; //
         orderParams.tradingsymbol = tradeSymbol;
-        orderParams.producttype =Constants.PRODUCT_CARRYFORWARD;
+        orderParams.producttype = Constants.PRODUCT_CARRYFORWARD;
         orderParams.duration = Constants.DURATION_DAY;
         orderParams.transactiontype = transactionType;
         if (transactionType.equals(Constants.TRANSACTION_TYPE_BUY)) {
@@ -844,7 +862,7 @@ public class StopAtMaxLossScheduler {
                 orderParams.triggerprice = String.valueOf(roundOff(triggerPrice));
                 orderParams.variety = Constants.VARIETY_STOPLOSS;
                 orderParams.ordertype = Constants.ORDER_TYPE_STOPLOSS_LIMIT;
-                orderParams.price = roundOff(roundOff(triggerPrice)-0.5);
+                orderParams.price = roundOff(roundOff(triggerPrice) - 0.5);
             } else {
                 orderParams.price = roundOff(sellPrice);
             }
@@ -884,6 +902,13 @@ public class StopAtMaxLossScheduler {
                          String transactionType,
                          String productType) {
         Order order = null;
+        int currentOrders = configs.getTotalMaxOrdersAllowed();
+        if (currentOrders < 0) {
+            log.info("Max orders placed, can not place further orders");
+            sendMessage.sendMessage("Max orders placed, can not place further orders");
+            return null;
+        }
+        configs.setTotalMaxOrdersAllowed(currentOrders - 1);
 
         OrderParams orderParams = new OrderParams();
         orderParams.variety = Constants.VARIETY_STOPLOSS;

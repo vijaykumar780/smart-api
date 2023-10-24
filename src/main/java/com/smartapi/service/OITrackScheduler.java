@@ -167,7 +167,7 @@ public class OITrackScheduler {
             });
             log.info("Processed {} symbols. Oi change percent {}", symbolDataList.size(), configs.getOiPercent());
         } catch (Exception e) {
-            log.error("Error in processing symbols at count {}", cnt, e);
+            log.error("Error in processing symbols at count {}, {}", cnt, e.getMessage());
         }
         if (success == 1) {
             configs.setSymbolDataList(symbolDataList);
@@ -525,8 +525,12 @@ public class OITrackScheduler {
                                             traded = true;
                                         }
                                     } else if (LocalDate.now().getDayOfWeek().equals(DayOfWeek.THURSDAY)) {
-                                        // nifty only
                                         if (symbol.startsWith("NIFTY")) { // nifty
+                                            log.info(opt);
+                                            sendMessage.sendMessage(opt);
+                                            placeOrders(tradeSymbol);
+                                            traded = true;
+                                        } else if (symbol.contains(today) && symbol.startsWith("BANKNIFTY")) { // BANKNIFTY
                                             log.info(opt);
                                             sendMessage.sendMessage(opt);
                                             placeOrders(tradeSymbol);

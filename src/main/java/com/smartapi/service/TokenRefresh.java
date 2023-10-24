@@ -96,13 +96,14 @@ public class TokenRefresh {
     @Scheduled(cron = "0 45 8 * * ?")
     public void reInitEmail() {
         int ct = 200;
-        sendMessage.sendMessage("Re init email count threshold and SymbolExitedFromScheduler" + ct);
+        //sendMessage.sendMessage("Re init email count threshold and SymbolExitedFromScheduler" + ct);
         configs.setMaxLossEmailCount(ct);
         configs.setSymbolExitedFromScheduler(new ArrayList<>());
         configs.setOiTradeMap(new HashMap<>());
         configs.setOiBasedTradePlaced(false);
         configs.setSymbolMap(new HashMap<>());
         configs.setTradedOptions(new ArrayList<>());
+        configs.setTotalMaxOrdersAllowed(300);
         log.info("Re inited email count threshold");
     }
 }

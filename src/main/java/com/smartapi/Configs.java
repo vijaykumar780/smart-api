@@ -145,6 +145,8 @@ public class Configs {
 	// max profit
 	int maxProfit = 0;
 
+	int totalMaxOrdersAllowed = 300;
+
 	@Bean
 	PlacedOrders placedOrders() {
 		return new PlacedOrders();

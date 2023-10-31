@@ -399,6 +399,10 @@ public class StopAtMaxLossScheduler {
                     }
                 }
 
+                if (netQty < 0) {
+                    netQty = -netQty;
+                }
+
                 int indexMaxSellQty;
                 if (sellOptionSymbol.startsWith("MIDCPNIFTY")) {
                     indexMaxSellQty = configs.getOiBasedTradeMidcapQty();
@@ -416,6 +420,7 @@ public class StopAtMaxLossScheduler {
 
                 // all orders are not placed yet for sale
                 if (netQty < thresholdForSellQty) {
+                    log.info("Returning from 50% sl as net qty {} and threshold {}", netQty, thresholdForSellQty);
                     return;
                 }
 
@@ -526,6 +531,7 @@ public class StopAtMaxLossScheduler {
                 double netQty = 1.0;
                 String productType = "";
                 String token = "";
+                log.info("Trying placing pre sl order as loss at current loss of mtm {}, L1 {}, L2 {}", mtm, triggerLossForPreStrictSl, triggerLoss50Percent);
 
                 for (i = 0; i < positionsJsonArray.length(); i++) {
                     JSONObject pos = positionsJsonArray.optJSONObject(i);

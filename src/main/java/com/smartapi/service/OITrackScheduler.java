@@ -1086,9 +1086,9 @@ public class OITrackScheduler {
             if (indexName.equals("MIDCPNIFTY")) {
                 ltpLimit = 13.0;
             } else if (indexName.equals("BANKNIFTY")) {
-                ltpLimit = 40.0;
+                ltpLimit = 50.0;
             } else {
-                ltpLimit = 25.0;
+                ltpLimit = 32.0;
             }
             log.info("Ltp limit {}", ltpLimit);
 

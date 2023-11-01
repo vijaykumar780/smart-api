@@ -107,7 +107,7 @@ public class TokenRefresh {
         log.info("Re inited email count threshold");
     }
 
-    @Scheduled(cron = "0 0 16 * * ?")
+    @Scheduled(cron = "0 15 16 * * ?")
     public void memoryClear() {
         configs.setSymbolExitedFromScheduler(new ArrayList<>());
         configs.setOiTradeMap(new HashMap<>());

@@ -248,7 +248,7 @@ public class OITrackScheduler {
         // Any change made to from and to time here, should also be made in stop loss scheduler
         // Time now is not allowed.
         LocalTime localStartTimeMarket = LocalTime.of(11, 30, 0);
-        LocalTime localEndTime = LocalTime.of(15, 15, 1);
+        LocalTime localEndTime = LocalTime.of(16, 10, 1);
         LocalTime now1 = LocalTime.now();
 
         LocalDate expiryDateNifty = getExpiryDate(DayOfWeek.THURSDAY); // use wednesday if holiday on exp

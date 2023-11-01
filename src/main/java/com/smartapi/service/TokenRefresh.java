@@ -106,4 +106,14 @@ public class TokenRefresh {
         configs.setTotalMaxOrdersAllowed(300);
         log.info("Re inited email count threshold");
     }
+
+    @Scheduled(cron = "0 0 16 * * ?")
+    public void memoryClear() {
+        configs.setSymbolExitedFromScheduler(new ArrayList<>());
+        configs.setOiTradeMap(new HashMap<>());
+        configs.setOiBasedTradePlaced(false);
+        configs.setSymbolMap(new HashMap<>());
+        configs.setTradedOptions(new ArrayList<>());
+        log.info("Cleared memory");
+    }
 }

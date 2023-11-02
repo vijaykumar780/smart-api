@@ -100,6 +100,9 @@ public class Configs {
 	@Value("${oiBasedTradeBankNiftyQty}")
 	private int oiBasedTradeBankNiftyQty;
 
+	@Value("${oiBasedTradeSensexQty}")
+	private int oiBasedTradeSensexQty;
+
 	@Value("${niftyLotSize}")
 	private int niftyLotSize;
 
@@ -112,12 +115,17 @@ public class Configs {
 	@Value("${bankNiftyLotSize}")
 	private int bankNiftyLotSize;
 
+	@Value("${sensexLotSize}")
+	private int sensexLotSize;
+
 	@Value("${maxLossAmount}")
 	private int maxLossAmount;
 
 	private List<SymbolData> symbolDataList;
 
 	private Map<String, SymbolData> symbolMap;
+
+	private Map<String, SymbolData> sensxSymbolData;
 
 	private String tokenForMarketData;
 

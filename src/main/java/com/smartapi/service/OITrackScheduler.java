@@ -67,6 +67,10 @@ public class OITrackScheduler {
     // Due to volatility keep disable midcp nifty cross over trade
     boolean isMidcpNiftyOiCrossTradeEnabled = false;
 
+    private String SENSEX = "SENSEX";
+
+    private String BSE_NFO = "BFO";
+    private String NSE_NFO = "NFO";
     @Scheduled(cron = "0 50 8 * * ?")
     public void reInitEmail() {
         int success = 0;
@@ -94,7 +98,7 @@ public class OITrackScheduler {
         configs.setOiTradeMap(new HashMap<>());
         configs.setOiBasedTradePlaced(false);
         configs.setTradedOptions(new ArrayList<>());
-
+        configs.setSensxSymbolData(new HashMap<>());
         log.info("Initializing rest template");
         restTemplate = new RestTemplateBuilder().setConnectTimeout(Duration.ofSeconds(10))
                 .setReadTimeout(Duration.ofSeconds(10))
@@ -137,8 +141,8 @@ public class OITrackScheduler {
                         .strike(((int) Double.parseDouble(ob.optString("strike"))) / 100)
                         .build();
                 cnt++;
-                if (Arrays.asList("NIFTY", "FINNIFTY", "MIDCPNIFTY", "BANKNIFTY").contains(symbolData.getName())
-                        && "NFO".equals(ob.optString("exch_seg"))) {
+                if (Arrays.asList("NIFTY", "FINNIFTY", "MIDCPNIFTY", "BANKNIFTY", SENSEX).contains(symbolData.getName())
+                        && ("NFO".equals(ob.optString("exch_seg")) || BSE_NFO.equals(ob.optString("exch_seg")))) {
                     symbolDataList.add(symbolData);
                     if (!oiMap.containsKey(symbolData.getName())) {
                         //oiMap.put(symbolData.getSymbol(), 100);
@@ -233,7 +237,7 @@ public class OITrackScheduler {
         today = today.toUpperCase();
         try {
             log.info("Configs used currently for oi based trade.oiPercent: {}\n oiBasedTradeEnabled: {}\n oiBasedTradePlaced {}\n midcapQty {}\n " +
-                            "Nifty qty {}\n Finnifty Qty {}\n Banknifty qty {}\n Today {}\n maxLoss Limit {}\n symbolsLoaded {}\n",
+                            "Nifty qty {}\n Finnifty Qty {}\n Banknifty qty {}\n SEXSX Qty {}\n Today {}\n maxLoss Limit {}\n symbolsLoaded {}\n",
                     configs.getOiPercent(),
                     configs.isOiBasedTradeEnabled(),
                     configs.getOiBasedTradePlaced(),
@@ -241,6 +245,7 @@ public class OITrackScheduler {
                     configs.getOiBasedTradeQtyNifty(),
                     configs.getOiBasedTradeQtyFinNifty(),
                     configs.getOiBasedTradeBankNiftyQty(),
+                    configs.getOiBasedTradeSensexQty(),
                     today, configs.getMaxLossAmount(),
                     configs.getSymbolDataList().size());
             } catch (Exception exception) {
@@ -255,23 +260,25 @@ public class OITrackScheduler {
         LocalDate expiryDateFinNifty = getExpiryDate(DayOfWeek.TUESDAY); // if holiday then skip its monday exp as midcap there
         LocalDate expiryDateMidcapNifty = getExpiryDate(DayOfWeek.MONDAY); // use friday exp
         LocalDate expiryDateBankNifty = getExpiryDate(DayOfWeek.WEDNESDAY);
+        LocalDate expirySenSex = getExpiryDate(DayOfWeek.FRIDAY);
 
         double niftyLtp = 0;
         double finniftyLtp = 0;
         double midcapLtp = 0;
         double bankNiftyLtp = 0;
-
+        double sensxLtp = 0;
         try {
             niftyLtp = getOi("99926000", "NSE");
             bankNiftyLtp = getOi("99926009", "NSE");
 
             finniftyLtp = getOi("99926037", "NSE");
             midcapLtp = getOi("99926074", "NSE");
+            sensxLtp = getOi("99919000", "BSE");
             if (midcapLtp == -1) {
                 midcapLtp = configs.getMidcapNiftyValue();
             }
-            log.info("Index values nifty: {}\n finnifty: {}\n midcapnifty {}\n BankNifty {}\n Nifty exp {}\n fnnifty exp {}\n midcap exp {}\n BankNifty exp {}\n",
-                    niftyLtp, finniftyLtp, midcapLtp, bankNiftyLtp, expiryDateNifty, expiryDateFinNifty, expiryDateMidcapNifty, expiryDateBankNifty);
+            log.info("Index values nifty: {}\n finnifty: {}\n midcapnifty {}\n BankNifty {}\n Sensx {}\n  Nifty exp {}\n fnnifty exp {}\n midcap exp {}\n BankNifty exp {}\n, sensx exp {}",
+                    niftyLtp, finniftyLtp, midcapLtp, bankNiftyLtp, sensxLtp, expiryDateNifty, expiryDateFinNifty, expiryDateMidcapNifty, expiryDateBankNifty, expirySenSex);
             if (configs.getTradedOptions()!=null && !configs.getTradedOptions().isEmpty()) {
                 log.info("Traded options\n");
                 for (String str : configs.getTradedOptions()) {
@@ -291,7 +298,7 @@ public class OITrackScheduler {
         int finniftyDiff = 500;
         int midcapDiff = 600;
         int bankNiftyDiff = 800;
-
+        int senSxDiff = 1000;
         StringBuilder email = new StringBuilder();
         List<SymbolData> symbols = configs.getSymbolDataList();
         for (SymbolData symbolData : symbols) {
@@ -453,6 +460,49 @@ public class OITrackScheduler {
                         //log.info("OI Data | {}", response);
                     }
 
+                } else if (symbolData.getName().equals(SENSEX) && expirySenSex.equals(symbolData.getExpiry())
+                        && Math.abs(symbolData.getStrike() - sensxLtp) <= senSxDiff) {
+                    String name = "";
+                    name = name + SENSEX + "_";
+                    name = name + symbolData.getStrike() + "_" + (symbolData.getSymbol().endsWith("CE") ? "CE" : "PE");
+                    if (!configs.getSymbolMap().containsKey(name)) {
+                        configs.getSymbolMap().put(name, symbolData);
+                    }
+                    if (!configs.getSensxSymbolData().containsKey(symbolData.getSymbol())) {
+                        configs.getSensxSymbolData().put(symbolData.getSymbol(), symbolData);
+                    }
+
+                    oi = getOi(symbolData.getToken(), BSE_NFO);
+
+                    if (oi == -1) {
+                        continue;
+                    }
+
+                    if (oiMap.containsKey(symbolData.getSymbol())) {
+                        double changePercent;
+                        if (oiMap.get(symbolData.getSymbol()) == 0) {
+                            changePercent = 0;
+                        } else {
+                            changePercent = ((double) (oi - oiMap.get(symbolData.getSymbol())) / (double) oiMap.get(symbolData.getSymbol())) * 100.0;
+                        }
+                        String response = String.format("Index: %s, Option: %s, current oi: %d, Change: %d Change percent: %f Symbol: %s", SENSEX, symbolData.getStrike() + " " +
+                                symbolData.getSymbol().substring(symbolData.getSymbol().length() - 2), oi, oi - oiMap.get(symbolData.getSymbol()), changePercent, symbolData.getSymbol());
+
+                        if (Math.abs(changePercent) >= configs.getOiPercent() && oi > 500000 && symbolData.getSymbol().contains(today)) {
+                            email.append(response);
+                            email.append("\n\n");
+                        } else if ((Math.abs(changePercent) >= configs.getOiPercent())) {
+                            log.info("{} has change % above oi percent. percent {}\n", symbolData.getSymbol(), changePercent);
+                        }
+                        oiMap.put(symbolData.getSymbol(), oi);
+                        //log.info("OI Data | {}", response);
+                    } else {
+                        oiMap.put(symbolData.getSymbol(), oi);
+                        String response = String.format("Index: %s, Option: %s, current oi: %d, Symbol: %s", SENSEX, symbolData.getStrike() + " " +
+                                symbolData.getSymbol().substring(symbolData.getSymbol().length() - 2), oi, symbolData.getSymbol());
+
+                        //log.info("OI Data | {}", response);
+                    }
                 }
             } catch (Exception e) {
                 log.error("Error in fetching oi of symbol {}", symbolData.getSymbol(), e);
@@ -609,7 +659,7 @@ public class OITrackScheduler {
                             if (diffPercent <= diffInitial) {
                                 eligible = true;
                             }
-                            log.info("Symbol {} stored in map\n", symbol);
+                            log.info("Symbol: {} stored with initial CE OI: {}, PE OI: {}\n", symbol, ceOi, peOi);
                             configs.getOiTradeMap().put(symbol, OiTrade.builder().ceOi(ceOi)
                                     .peOi(peOi).eligible(eligible).build());
                         }
@@ -619,11 +669,12 @@ public class OITrackScheduler {
                 log.error("Error occurred in processing strike: {}\n", entry.getKey(), e);
             }
         }
-        log.info("Oi based trade Map\n");
-        printOiMap(today);
 
         trackMaxOiMail(today);
         log.info("Finished tracking oi based trade\n");
+
+        log.info("Oi based trade Map\n");
+        printOiMap(today);
         System.gc();
     }
 
@@ -680,6 +731,18 @@ public class OITrackScheduler {
                 log.info("{} : {}\n", result.get(j), configs.getOiTradeMap().get(result.get(j)));
             }
         }
+
+        for (Map.Entry<String, OiTrade> entry : configs.getOiTradeMap().entrySet()) {
+            if (entry.getKey().startsWith(SENSEX)) {
+                result.add(entry.getKey());
+            }
+        }
+        result.sort(String::compareTo);
+        for (j=0;j<result.size();j++) {
+            if (configs.getSensxSymbolData().get(result.get(j)).getExpiryString().contains(today)) {
+                log.info("{} : {}\n", result.get(j), configs.getOiTradeMap().get(result.get(j)));
+            }
+        }
         result.clear();
     }
 
@@ -693,7 +756,12 @@ public class OITrackScheduler {
         String symbol2 = "";
         if (now.isAfter(LocalTime.of(14, 28))) {
             for (Map.Entry<String, OiTrade> entry : configs.getOiTradeMap().entrySet()) {
-                if (entry.getKey().contains(today)) { // expiry
+                String senSxToday = "";
+                if (entry.getKey().startsWith(SENSEX)) {
+                    senSxToday = configs.getSensxSymbolData().get(entry.getKey()).getExpiryString();
+                }
+
+                if (entry.getKey().contains(today) || ((!senSxToday.isEmpty()) && senSxToday.contains(today))) { // expiry
                     int oi = entry.getValue().getCeOi() + entry.getValue().getPeOi();
                     if (oi>maxOi1 && oi>maxOi2) {
                         maxOi2 = maxOi1;
@@ -742,28 +810,30 @@ public class OITrackScheduler {
             }
         }
 
-        if (now.isAfter(LocalTime.of(14, 31)) && now.isBefore(LocalTime.of(15, 20)) &&
-                !configs.getOiBasedTradePlaced()) {
-            List<OptionData> optionDataList = new ArrayList<>();
-            for (Map.Entry<String, Integer> entry : oiMap.entrySet()) {
-                if (entry.getValue() > 0 && entry.getKey().contains(today)) {
-                    optionDataList.add(OptionData.builder().symbol(entry.getKey()).oi(entry.getValue()).build());
-                }
-            }
-            List<OptionData> sortedOptData = optionDataList.stream().sorted((o1, o2) -> (o1.getOi() > o2.getOi() ? -1 : 1)).collect(Collectors.toList());
-            if (now.getMinute() % 5 == 0 && sortedOptData.size() >= 4) {
-                StringBuilder emailContent = new StringBuilder();
-                emailContent.append("Symbol, Oi\n");
-
-                emailContent.append(getOiContent(sortedOptData.get(0), today));
-                emailContent.append(getOiContent(sortedOptData.get(1), today));
-                emailContent.append(getOiContent(sortedOptData.get(2), today));
-                emailContent.append(getOiContent(sortedOptData.get(3), today));
-
-                log.info("Max oi data: {}\n", emailContent.toString());
-                sendMessage.sendMessage(emailContent.toString());
-            }
-        }
+        /**
+         * if (now.isAfter(LocalTime.of(14, 31)) && now.isBefore(LocalTime.of(15, 20)) &&
+         *                 !configs.getOiBasedTradePlaced()) {
+         *             List<OptionData> optionDataList = new ArrayList<>();
+         *             for (Map.Entry<String, Integer> entry : oiMap.entrySet()) {
+         *                 if (entry.getValue() > 0 && entry.getKey().contains(today)) {
+         *                     optionDataList.add(OptionData.builder().symbol(entry.getKey()).oi(entry.getValue()).build());
+         *                 }
+         *             }
+         *             List<OptionData> sortedOptData = optionDataList.stream().sorted((o1, o2) -> (o1.getOi() > o2.getOi() ? -1 : 1)).collect(Collectors.toList());
+         *             if (now.getMinute() % 5 == 0 && sortedOptData.size() >= 4) {
+         *                 StringBuilder emailContent = new StringBuilder();
+         *                 emailContent.append("Symbol, Oi\n");
+         *
+         *                 emailContent.append(getOiContent(sortedOptData.get(0), today));
+         *                 emailContent.append(getOiContent(sortedOptData.get(1), today));
+         *                 emailContent.append(getOiContent(sortedOptData.get(2), today));
+         *                 emailContent.append(getOiContent(sortedOptData.get(3), today));
+         *
+         *                 log.info("Max oi data: {}\n", emailContent.toString());
+         *                 sendMessage.sendMessage(emailContent.toString());
+         *             }
+         *         }
+         */
     }
 
     private String getOiContent(OptionData optionData, String today) {
@@ -810,6 +880,8 @@ public class OITrackScheduler {
                 maxQty = 4200;
             } else if (indexName.equals("BANKNIFTY")) {
                 maxQty = 900;
+            } else if (indexName.equals(SENSEX)) {
+                maxQty = 1000;
             } else {
                 maxQty = 1800;
             }
@@ -826,6 +898,8 @@ public class OITrackScheduler {
                 strikeDiff = 50;
             } else if (indexName.equals("BANKNIFTY")) {
                 strikeDiff = 300;
+            } else if (indexName.equals(SENSEX)) {
+                strikeDiff = 300;
             } else {
                 strikeDiff = 100;
             }
@@ -836,6 +910,8 @@ public class OITrackScheduler {
                 qty = configs.getOiBasedTradeQtyNifty();
             } else if (indexName.equals("BANKNIFTY")) {
                 qty = configs.getOiBasedTradeBankNiftyQty();
+            } else if (indexName.equals(SENSEX)) {
+                qty = configs.getOiBasedTradeSensexQty();
             } else {
                 qty = configs.getOiBasedTradeQtyFinNifty();
             }
@@ -848,7 +924,7 @@ public class OITrackScheduler {
             }*/
             double q1, q2, q3;
             double maxLoss = configs.getMaxLossAmount();
-            Double sellLtp = getLtp(sellSymbolData.getToken());
+            Double sellLtp = getLtp(sellSymbolData.getToken(), indexName.equals(SENSEX) ? BSE_NFO: NSE_NFO);
             q1 = getQ1Abs(maxLoss);
             q2 = getQ2Abs(maxLoss, sellLtp);
 
@@ -859,6 +935,8 @@ public class OITrackScheduler {
                 lotSize = configs.getNiftyLotSize();
             } else if (indexName.equals("BANKNIFTY")) {
                 lotSize = configs.getBankNiftyLotSize();
+            } else if (indexName.equals(SENSEX)) {
+                lotSize = configs.getSensexLotSize();
             } else {
                 lotSize = configs.getFinniftyLotSize();
             }
@@ -881,7 +959,7 @@ public class OITrackScheduler {
             configs.setTradedOptions(tradedOptions);
 
             // place full and remaining orders.
-            Double buyLtp = getLtp(buySymbolData.getToken());
+            Double buyLtp = getLtp(buySymbolData.getToken(), indexName.equals(SENSEX) ? BSE_NFO: NSE_NFO);
             for (i = 0; i < fullBatches; i++) {
                 Order order = stopAtMaxLossScheduler.placeOrder(buySymbolData.getSymbol(), buySymbolData.getToken(), buyLtp, maxQty, Constants.TRANSACTION_TYPE_BUY, 0.0);
                 if (order != null) {
@@ -1059,6 +1137,8 @@ public class OITrackScheduler {
             indexName = "MIDCPNIFTY";
         } else if (tradeSymbol.startsWith("BANKNIFTY")) {
             indexName = "BANKNIFTY";
+        } else if (tradeSymbol.startsWith(SENSEX)) {
+            indexName = SENSEX;
         }
         return indexName;
     }
@@ -1077,6 +1157,8 @@ public class OITrackScheduler {
                 step = 25;
             } else if (indexName.equals("BANKNIFTY")) {
                 step = 100;
+            } else if (indexName.equals(SENSEX)) {
+                step = 100;
             } else {
                 step = 50;
             }
@@ -1087,13 +1169,15 @@ public class OITrackScheduler {
                 ltpLimit = 13.0;
             } else if (indexName.equals("BANKNIFTY")) {
                 ltpLimit = 50.0;
+            } else if (indexName.equals(SENSEX)) {
+                ltpLimit = 50.0;
             } else {
                 ltpLimit = 32.0;
             }
             log.info("Ltp limit {}", ltpLimit);
 
             for (i = 0; i < 50; i++) {
-                Double ltp = getLtp(symbolData.getToken());
+                Double ltp = getLtp(symbolData.getToken(), indexName.equals(SENSEX) ? BSE_NFO: NSE_NFO);
                 if (ltp <= ltpLimit) {
                     return symbolData;
                 }
@@ -1140,7 +1224,9 @@ public class OITrackScheduler {
                 strikeDiff = 50;
             } else if (indexName.equals("BANKNIFTY")) {
                 strikeDiff = 300;
-            } else {
+            } else if (indexName.equals(SENSEX)) {
+                strikeDiff = 300;
+            }else {
                 strikeDiff = 100;
             }
 
@@ -1150,6 +1236,8 @@ public class OITrackScheduler {
                 qty = configs.getOiBasedTradeQtyNifty();
             } else if (indexName.equals("BANKNIFTY")) {
                 qty = configs.getOiBasedTradeBankNiftyQty();
+            } else if (indexName.equals(SENSEX)) {
+                qty = configs.getOiBasedTradeSensexQty();
             } else {
                 qty = configs.getOiBasedTradeQtyFinNifty();
             }
@@ -1162,7 +1250,7 @@ public class OITrackScheduler {
             }*/
             double q1, q2, q3;
             double maxLoss = configs.getMaxLossAmount();
-            Double sellLtp = getLtp(sellSymbolData.getToken());
+            Double sellLtp = getLtp(sellSymbolData.getToken(), indexName.equals(SENSEX) ? BSE_NFO: NSE_NFO);
             q1 = getQ1Abs(maxLoss);
             q2 = getQ2Abs(maxLoss, sellLtp);
 
@@ -1173,6 +1261,8 @@ public class OITrackScheduler {
                 lotSize = configs.getNiftyLotSize();
             } else if (indexName.equals("BANKNIFTY")) {
                 lotSize = configs.getBankNiftyLotSize();
+            } else if (indexName.equals(SENSEX)) {
+                lotSize = configs.getSensexLotSize();
             } else {
                 lotSize = configs.getFinniftyLotSize();
             }
@@ -1195,7 +1285,7 @@ public class OITrackScheduler {
             configs.setTradedOptions(tradedOptions);
 
             // place full and remaining orders.
-            Double buyLtp = getLtp(buySymbolData.getToken());
+            Double buyLtp = getLtp(buySymbolData.getToken(), indexName.equals(SENSEX) ? BSE_NFO: NSE_NFO);
             for (i = 0; i < fullBatches; i++) {
                 Order order = stopAtMaxLossScheduler.placeOrder(buySymbolData.getSymbol(), buySymbolData.getToken(), buyLtp, maxQty, Constants.TRANSACTION_TYPE_BUY, 0.0);
                 if (order != null) {
@@ -1313,7 +1403,7 @@ public class OITrackScheduler {
                     JSONArray fetched = data.optJSONArray("fetched");
                     JSONObject oiData = fetched.optJSONObject(0);
                     Thread.sleep(15);
-                    if (segment.equals("NFO")) {
+                    if (segment.equals("NFO") || segment.equals(BSE_NFO)) {
                         return oiData.optInt("opnInterest");
                     } else {
                         return (int) oiData.optDouble("ltp");
@@ -1330,8 +1420,7 @@ public class OITrackScheduler {
         return -1;
     }
 
-    private double getLtp(String token) throws InterruptedException {
-        String segment = "NFO";
+    private double getLtp(String token, String segment) throws InterruptedException {
         for (int i = 0; i < 100; i++) {
             try {
                 HttpHeaders httpHeaders = new HttpHeaders();

@@ -104,6 +104,7 @@ public class TokenRefresh {
         configs.setSymbolMap(new HashMap<>());
         configs.setTradedOptions(new ArrayList<>());
         configs.setTotalMaxOrdersAllowed(300);
+        configs.setSensxSymbolData(new HashMap<>());
         log.info("Re inited email count threshold");
     }
 
@@ -114,6 +115,7 @@ public class TokenRefresh {
         configs.setOiBasedTradePlaced(false);
         configs.setSymbolMap(new HashMap<>());
         configs.setTradedOptions(new ArrayList<>());
+        configs.setSensxSymbolData(new HashMap<>());
         log.info("Cleared memory");
     }
 }

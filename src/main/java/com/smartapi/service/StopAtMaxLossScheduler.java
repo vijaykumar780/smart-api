@@ -31,6 +31,7 @@ import static java.time.temporal.ChronoUnit.SECONDS;
 @Service
 public class StopAtMaxLossScheduler {
 
+    private static final String SENSEX = "SENSEX";
     //@Autowired
     SmartConnect historySmartConnect;
 
@@ -850,7 +851,7 @@ public class StopAtMaxLossScheduler {
         orderParams.variety = Constants.VARIETY_NORMAL;
         orderParams.quantity = qty;
         orderParams.symboltoken = tradeToken;
-        orderParams.exchange = "NFO";
+        orderParams.exchange = tradeSymbol.startsWith(SENSEX) ? "BFO" : "NFO";
         orderParams.ordertype = Constants.ORDER_TYPE_LIMIT; //
         orderParams.tradingsymbol = tradeSymbol;
         orderParams.producttype = Constants.PRODUCT_CARRYFORWARD;

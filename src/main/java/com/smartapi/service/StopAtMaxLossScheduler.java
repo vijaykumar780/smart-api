@@ -411,6 +411,8 @@ public class StopAtMaxLossScheduler {
                     indexMaxSellQty = configs.getOiBasedTradeQtyNifty();
                 } else if (sellOptionSymbol.startsWith("BANKNIFTY")) {
                     indexMaxSellQty = configs.getOiBasedTradeBankNiftyQty();
+                } else if (sellOptionSymbol.startsWith(SENSEX)) {
+                    indexMaxSellQty = configs.getOiBasedTradeSensexQty();
                 } else {
                     indexMaxSellQty = configs.getOiBasedTradeQtyFinNifty();
                 }
@@ -634,6 +636,8 @@ public class StopAtMaxLossScheduler {
             lotSize = configs.getNiftyLotSize();
         } else if (symbol.startsWith("BANKNIFTY")) {
             lotSize = configs.getBankNiftyLotSize();
+        } else if (symbol.startsWith(SENSEX)) {
+            lotSize = configs.getSensexLotSize();
         } else {
             lotSize = configs.getFinniftyLotSize();
         }
@@ -646,6 +650,8 @@ public class StopAtMaxLossScheduler {
             maxQty = 4200;
         } else if (symbol.contains("BANKNIFTY")) {
             maxQty = 900;
+        } else if (symbol.contains(SENSEX)) {
+            maxQty = 1000;
         } else {
             maxQty = 1800;
         }
@@ -658,6 +664,8 @@ public class StopAtMaxLossScheduler {
             maxQty = 4200;
         } else if (symbol.contains("BANKNIFTY")) {
             maxQty = 900;
+        } else if (symbol.contains(SENSEX)) {
+            maxQty = 1000;
         } else {
             maxQty = 1800;
         }
@@ -921,7 +929,7 @@ public class StopAtMaxLossScheduler {
         orderParams.variety = Constants.VARIETY_STOPLOSS;
         orderParams.quantity = qty;
         orderParams.symboltoken = tradeToken;
-        orderParams.exchange = "NFO";
+        orderParams.exchange = tradeSymbol.startsWith(SENSEX) ? "BFO" : "NFO";
         orderParams.ordertype = Constants.ORDER_TYPE_STOPLOSS_LIMIT; //
         orderParams.tradingsymbol = tradeSymbol;
         orderParams.producttype = productType;

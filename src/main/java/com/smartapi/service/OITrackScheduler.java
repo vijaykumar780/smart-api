@@ -759,6 +759,7 @@ public class OITrackScheduler {
                 String senSxToday = "";
                 if (entry.getKey().startsWith(SENSEX)) {
                     senSxToday = configs.getSensxSymbolData().get(entry.getKey()).getExpiryString();
+                    senSxToday = senSxToday.substring(0,5) + senSxToday.substring(7);
                 }
 
                 if (entry.getKey().contains(today) || ((!senSxToday.isEmpty()) && senSxToday.contains(today))) { // expiry
@@ -848,7 +849,7 @@ public class OITrackScheduler {
             return oi;
         } else if (ceCount == 1) {
             ceCount++;
-            return 8400000;
+            return 341570;
         } else {
             ceCount++;
             return 435435343;
@@ -1003,13 +1004,23 @@ public class OITrackScheduler {
             intq3 = (int) q3 * (int) lotSize;
 
             intq4 = qty - intq1 - intq2 - intq3;
-
-            if (intq1+intq2>qty) {
+            if (intq1>qty) {
+                log.info("Adjusting Q1");
+                intq1 = qty;
+                intq2 = 0;
+                intq3 = 0;
+                intq4 = 0;
+            } else if (intq1+intq2>qty) {
                 log.info("Adjusting Qty2");
                 intq2 = qty - intq1;
+
+                intq3 = 0;
+                intq4 = 0;
             } else if (intq1+intq2+intq3>qty) {
                 log.info("Adjusting Qty3");
                 intq3 = qty - intq1 - intq2;
+
+                intq4 = 0;
             } else if (intq1+intq2+intq3+intq4>qty) {
                 log.info("Adjusting Qty4");
                 intq4 = qty - intq1 - intq2 - intq3;
@@ -1208,6 +1219,8 @@ public class OITrackScheduler {
                 maxQty = 4200;
             } else if (indexName.equals("BANKNIFTY")) {
                 maxQty = 900;
+            } else if (indexName.equals(SENSEX)) {
+                maxQty = 1000;
             } else {
                 maxQty = 1800;
             }

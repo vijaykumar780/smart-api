@@ -127,6 +127,7 @@ public class StopAtMaxLossScheduler {
             return;
         }
 
+        //log.info(positionsJsonArray.toString());
         JSONObject orders = marketSmartConnect.getOrderHistory("v122968");
         if (orders == null) {
             log.info("Re-fetch orders");
@@ -212,10 +213,10 @@ public class StopAtMaxLossScheduler {
                         Order cancelOrder = tradingSmartConnect.cancelOrder(order.optString("orderid"), order.optString("variety"));
                         if (cancelOrder == null) {
                             log.info("Retry cancel order\n");
-                            Thread.sleep(100);
+                            Thread.sleep(200);
                             cancelOrder = tradingSmartConnect.cancelOrder(order.optString("orderid"), order.optString("variety"));
                         }
-                        Thread.sleep(100);
+                        Thread.sleep(200);
                         log.info("Cancelled order {}. Symbol {}. Order {}\n", order.optString("orderid"), order.optString("tradingsymbol"), cancelOrder);
                     }
                 }
@@ -269,7 +270,7 @@ public class StopAtMaxLossScheduler {
                                     log.info("Buy order failed to processed, retrying\n");
                                     init();
                                     try {
-                                        Thread.sleep(100);
+                                        Thread.sleep(200);
                                     } catch (InterruptedException e) {
                                         e.printStackTrace();
                                     }
@@ -279,7 +280,7 @@ public class StopAtMaxLossScheduler {
                                         log.error("Error in placing order for {}\n", pos.optString("symboltoken"), e);
                                     }
                                 }
-                                Thread.sleep(100);
+                                Thread.sleep(200);
                                 log.info("Order placed to close pos {}\n", order);
                                 try {
                                     List<String> symbolsExitedFromScheduler = configs.getSymbolExitedFromScheduler();
@@ -314,7 +315,7 @@ public class StopAtMaxLossScheduler {
                                 sellOrderParams.producttype = pos.optString("producttype");
                                 sellOrderParams.duration = Constants.DURATION_DAY;
                                 sellOrderParams.transactiontype = Constants.TRANSACTION_TYPE_SELL;
-                                Double sellPrice = Double.parseDouble(pos.optString("ltp")) - 2.00;
+                                Double sellPrice = Double.parseDouble(pos.optString("ltp")) - 5.00;
                                 if (sellPrice <= 1.0) {
                                     sellPrice = 0.1;
                                 }
@@ -331,7 +332,7 @@ public class StopAtMaxLossScheduler {
                                     log.info("Sell order failed to processed, retrying");
                                     init();
                                     try {
-                                        Thread.sleep(100);
+                                        Thread.sleep(200);
                                     } catch (InterruptedException e) {
                                         e.printStackTrace();
                                     }
@@ -341,7 +342,7 @@ public class StopAtMaxLossScheduler {
                                         log.error("Error in placing order for {}", pos.optString("symboltoken"), e);
                                     }
                                 }
-                                Thread.sleep(100);
+                                Thread.sleep(200);
                                 log.info("Order placed to close pos {}", order);
                             } else {
                                 break;
@@ -777,7 +778,10 @@ public class StopAtMaxLossScheduler {
                 if (sellOptionSymbol.isEmpty()) {
                     log.info("Sell pos not found, skipping");
                     return false;
+                } else {
+                    log.info("Sell pos: {}", sellOptionSymbol);
                 }
+
                 List<OrderData> orderDataList = new ArrayList<>();
                 // orders are in ascending order of time
                 for (i = ordersJsonArray.length() - 1; i >= 0; i--) {
@@ -868,7 +872,7 @@ public class StopAtMaxLossScheduler {
         if (transactionType.equals(Constants.TRANSACTION_TYPE_BUY)) {
             orderParams.price = roundOff(price + 5.00);
         } else {
-            Double sellPrice = price - 2.00;
+            Double sellPrice = price - 5.00;
             if (sellPrice <= 1.0) {
                 sellPrice = 0.1;
             }
@@ -936,7 +940,7 @@ public class StopAtMaxLossScheduler {
         orderParams.duration = Constants.DURATION_DAY;
         orderParams.transactiontype = transactionType;
 
-        orderParams.price = roundOff(price + 2.00);
+        orderParams.price = roundOff(price + 5.00);
         orderParams.triggerprice = String.valueOf(roundOff(price));
 
         try {

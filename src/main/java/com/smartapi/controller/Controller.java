@@ -42,7 +42,7 @@ public class Controller {
     @Autowired
     OITrackScheduler oiTrackScheduler;
 
-    @GetMapping("/triggerManualTrade")
+    /*@GetMapping("/triggerManualTrade")
     public ResponseEntity<String > triggerManualTrade(@RequestParam(required = true) String symbol) {
         try {
             LocalTime now = LocalTime.now();
@@ -59,7 +59,7 @@ public class Controller {
             log.error("Error placing manual order for symbol {}", symbol, e);
             return new ResponseEntity<>("Error placing manual order for symbol " + symbol, HttpStatus.BAD_REQUEST);
         }
-    }
+    }*/
 
     @GetMapping("/servicecheck")
     public String serviceCheck() {
@@ -92,7 +92,7 @@ public class Controller {
         log.info("Updated configs nifty {}, finnifty {}, midcapnifty {}, oipercent {}", nifty, finnifty, midcapnifty, oiPercent);
     }
 
-    @GetMapping("/updateOiTradePlacedFalse")
+    /*@GetMapping("/updateOiTradePlacedFalse")
     public void updateOiTradePlacedFalse() {
         LocalTime now = LocalTime.now();
         // To handle volatility
@@ -104,7 +104,7 @@ public class Controller {
             sendMessage.sendMessage("Oi based trade placed can not be set false now");
             log.info("Oi based trade placed can not be set false now");
         }
-    }
+    }*/
 
     @GetMapping("/getPassword")
     public String getPassword() {
@@ -172,7 +172,7 @@ public class Controller {
                 start ++;
                 if (start >= startLine) {
                     response.append(line);
-                    response.append("\n");
+                    response.append("\n\n");
                 }
             }
             br.close();

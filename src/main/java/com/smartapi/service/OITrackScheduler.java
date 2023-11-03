@@ -126,6 +126,9 @@ public class OITrackScheduler {
             JSONArray jsonArray = new JSONArray(response.toString().substring(startIndex, endINdex));
 
             symbolDataList = new ArrayList<>();
+            LocalDate localDate = LocalDate.now();
+
+            String billMonthYear = localDate.getMonth().toString().substring(0,3)+ localDate.getYear();
             for (int i = 0; i < jsonArray.length(); i++) {
                 JSONObject ob = jsonArray.getJSONObject(i);
                 if (ob.optString("expiry") == null || ob.optString("expiry").isEmpty()
@@ -141,11 +144,14 @@ public class OITrackScheduler {
                         .strike(((int) Double.parseDouble(ob.optString("strike"))) / 100)
                         .build();
                 cnt++;
+
                 if (Arrays.asList("NIFTY", "FINNIFTY", "MIDCPNIFTY", "BANKNIFTY", SENSEX).contains(symbolData.getName())
                         && ("NFO".equals(ob.optString("exch_seg")) || BSE_NFO.equals(ob.optString("exch_seg")))) {
-                    symbolDataList.add(symbolData);
-                    if (!oiMap.containsKey(symbolData.getName())) {
-                        //oiMap.put(symbolData.getSymbol(), 100);
+                    if (ob.optString("expiry").contains(billMonthYear)) {
+                        symbolDataList.add(symbolData);
+                        if (!oiMap.containsKey(symbolData.getName())) {
+                            //oiMap.put(symbolData.getSymbol(), 100);
+                        }
                     }
                 }
             }
@@ -252,7 +258,7 @@ public class OITrackScheduler {
         }
         // Any change made to from and to time here, should also be made in stop loss scheduler
         // Time now is not allowed.
-        LocalTime localStartTimeMarket = LocalTime.of(11, 30, 0);
+        LocalTime localStartTimeMarket = LocalTime.of(11, 50, 0);
         LocalTime localEndTime = LocalTime.of(16, 10, 1);
         LocalTime now1 = LocalTime.now();
 
@@ -679,71 +685,77 @@ public class OITrackScheduler {
     }
 
     private void printOiMap(String today) {
-        List<String> result = new ArrayList<>();
-        int j;
-        for (Map.Entry<String, OiTrade> entry : configs.getOiTradeMap().entrySet()) {
-            if (entry.getKey().startsWith("NIFTY")) {
-                result.add(entry.getKey());
+        today = today.substring(0, 5) + "20" + today.substring(5);
+        try {
+            List<String> result = new ArrayList<>();
+            int j;
+            for (Map.Entry<String, OiTrade> entry : configs.getOiTradeMap().entrySet()) {
+                if (entry.getKey().startsWith("NIFTY")) {
+                    result.add(entry.getKey());
+                }
             }
-        }
-        result.sort(String::compareTo);
-        for (j=0;j<result.size();j++) {
-            if (result.get(j).contains(today)) {
-                log.info("{} : {}\n", result.get(j), configs.getOiTradeMap().get(result.get(j)));
+            result.sort(String::compareTo);
+            for (j = 0; j < result.size(); j++) {
+                if (result.get(j).contains(today)) {
+                    log.info("{} : {}\n", result.get(j), configs.getOiTradeMap().get(result.get(j)));
+                }
             }
-        }
-        result.clear();
+            result.clear();
 
-        for (Map.Entry<String, OiTrade> entry : configs.getOiTradeMap().entrySet()) {
-            if (entry.getKey().startsWith("FINNIFTY")) {
-                result.add(entry.getKey());
+            for (Map.Entry<String, OiTrade> entry : configs.getOiTradeMap().entrySet()) {
+                if (entry.getKey().startsWith("FINNIFTY")) {
+                    result.add(entry.getKey());
+                }
             }
-        }
-        result.sort(String::compareTo);
-        for (j=0;j<result.size();j++) {
-            if (result.get(j).contains(today)) {
-                log.info("{} : {}\n", result.get(j), configs.getOiTradeMap().get(result.get(j)));
+            result.sort(String::compareTo);
+            for (j = 0; j < result.size(); j++) {
+                if (result.get(j).contains(today)) {
+                    log.info("{} : {}\n", result.get(j), configs.getOiTradeMap().get(result.get(j)));
+                }
             }
-        }
-        result.clear();
+            result.clear();
 
-        for (Map.Entry<String, OiTrade> entry : configs.getOiTradeMap().entrySet()) {
-            if (entry.getKey().startsWith("MIDCP")) {
-                result.add(entry.getKey());
+            for (Map.Entry<String, OiTrade> entry : configs.getOiTradeMap().entrySet()) {
+                if (entry.getKey().startsWith("MIDCP")) {
+                    result.add(entry.getKey());
+                }
             }
-        }
-        result.sort(String::compareTo);
-        for (j=0;j<result.size();j++) {
-            if (result.get(j).contains(today)) {
-                log.info("{} : {}\n", result.get(j), configs.getOiTradeMap().get(result.get(j)));
+            result.sort(String::compareTo);
+            for (j = 0; j < result.size(); j++) {
+                if (result.get(j).contains(today)) {
+                    log.info("{} : {}\n", result.get(j), configs.getOiTradeMap().get(result.get(j)));
+                }
             }
-        }
-        result.clear();
+            result.clear();
 
-        for (Map.Entry<String, OiTrade> entry : configs.getOiTradeMap().entrySet()) {
-            if (entry.getKey().startsWith("BANKNIFTY")) {
-                result.add(entry.getKey());
+            for (Map.Entry<String, OiTrade> entry : configs.getOiTradeMap().entrySet()) {
+                if (entry.getKey().startsWith("BANKNIFTY")) {
+                    result.add(entry.getKey());
+                }
             }
-        }
-        result.sort(String::compareTo);
-        for (j=0;j<result.size();j++) {
-            if (result.get(j).contains(today)) {
-                log.info("{} : {}\n", result.get(j), configs.getOiTradeMap().get(result.get(j)));
+            result.sort(String::compareTo);
+            for (j = 0; j < result.size(); j++) {
+                if (result.get(j).contains(today)) {
+                    log.info("{} : {}\n", result.get(j), configs.getOiTradeMap().get(result.get(j)));
+                }
             }
-        }
 
-        for (Map.Entry<String, OiTrade> entry : configs.getOiTradeMap().entrySet()) {
-            if (entry.getKey().startsWith(SENSEX)) {
-                result.add(entry.getKey());
+            result.clear();
+            for (Map.Entry<String, OiTrade> entry : configs.getOiTradeMap().entrySet()) {
+                if (entry.getKey().startsWith(SENSEX)) {
+                    result.add(entry.getKey());
+                }
             }
-        }
-        result.sort(String::compareTo);
-        for (j=0;j<result.size();j++) {
-            if (configs.getSensxSymbolData().get(result.get(j)).getExpiryString().contains(today)) {
-                log.info("{} : {}\n", result.get(j), configs.getOiTradeMap().get(result.get(j)));
+            result.sort(String::compareTo);
+            for (j = 0; j < result.size(); j++) {
+                if (configs.getSensxSymbolData().get(result.get(j)).getExpiryString().contains(today)) {
+                    log.info("{} : {}\n", result.get(j), configs.getOiTradeMap().get(result.get(j)));
+                }
             }
+            result.clear();
+        } catch (Exception e) {
+            log.error("Error in oi map print ", e);
         }
-        result.clear();
     }
 
     private void trackMaxOiMail(String today) throws Exception {

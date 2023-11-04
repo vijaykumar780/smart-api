@@ -177,6 +177,7 @@ public class OITrackScheduler {
             });
             log.info("Processed {} symbols. Oi change percent {}. Matched Expiries {}, Non match expiries {} for today", symbolDataList.size(), configs.getOiPercent(),
                     matchedExpiries, jsonArray.length() - matchedExpiries);
+            jsonArray = null;
         } catch (Exception e) {
             log.error("Error in processing symbols at count {}, {}", cnt, e.getMessage());
         }

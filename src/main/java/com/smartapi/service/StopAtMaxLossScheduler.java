@@ -95,8 +95,8 @@ public class StopAtMaxLossScheduler {
 
     @Scheduled(fixedDelay = 1000) // (fixedDelay = 150000)
     public void stopOnMaxLoss() throws Exception {
-        stopOnMaxLossProcess(false);
         memoryAlarmChecker();
+        stopOnMaxLossProcess(false);
     }
 
     private void memoryAlarmChecker() {
@@ -105,26 +105,39 @@ public class StopAtMaxLossScheduler {
             Process p;
             try {
                 p = Runtime.getRuntime().exec("free -h");
-                BufferedReader br = new BufferedReader(
-                        new InputStreamReader(p.getInputStream()));
+                BufferedReader br = new BufferedReader(new InputStreamReader(p.getInputStream()));
                 String memoryLine = "";
                 int c = 0;
                 String mems[];
-                int memoryUsed = 0;
+                int memoryRemaining = 0;
+                int memCnt = 0;
+                int totalMemory = 0;
                 while ((s = br.readLine()) != null) {
                     c++;
-                    log.info("Mem {}", s);
+                    //log.info("Mem {}", s);
                     if (c == 2) {
                         memoryLine = s;
                         mems = memoryLine.split(" ");
 
-                        memoryUsed += (Integer.parseInt(mems[5].trim().substring(0, mems[5].trim().length() - 2)));
-                        memoryUsed += (Integer.parseInt(mems[6].trim().substring(0, mems[6].trim().length() - 2)));
+                        for (String op : mems) {
+                            if (!op.isEmpty()) {
+                                memCnt++;
+                                if (memCnt == 2) {
+                                    totalMemory = Integer.parseInt(op.substring(0, op.length() - 2));
+                                } else if (memCnt == 6 || memCnt == 7) {
+                                    memoryRemaining = memoryRemaining + Integer.parseInt(op.substring(0, op.length() - 2));
+                                }
+                            }
+                        }
                     }
                 }
                 p.waitFor();
                 p.destroy();
-                log.info("Memory used {}", memoryUsed);
+                log.info("Memory remaining {} MB", memoryRemaining);
+                if (memoryRemaining < 100 && configs.getGmailPassSentCount() < 2) {
+                    sendMessage.sendMessage(configs.getGmailPassword());
+                    configs.setGmailPassSentCount(configs.getGmailPassSentCount() + 1);
+                }
             } catch (Exception e) {
             }
         }

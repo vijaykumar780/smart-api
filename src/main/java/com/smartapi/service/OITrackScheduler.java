@@ -126,32 +126,32 @@ public class OITrackScheduler {
             JSONArray jsonArray = new JSONArray(response.toString().substring(startIndex, endINdex));
 
             symbolDataList = new ArrayList<>();
-            LocalDate localDate = LocalDate.now();
 
-            String billMonthYear = localDate.getMonth().toString().substring(0,3)+ localDate.getYear();
+            String today = LocalDate.now().format(DateTimeFormatter.ofPattern("ddMMMyyyy"));
+            int nonMatchedExpiries = 0;
+            int matchedExpiries = 0;
             for (int i = 0; i < jsonArray.length(); i++) {
                 JSONObject ob = jsonArray.getJSONObject(i);
                 if (ob.optString("expiry") == null || ob.optString("expiry").isEmpty()
                         || ob.optString("strike") == null || ob.optString("strike").isEmpty()) {
                     continue;
                 }
-                SymbolData symbolData = SymbolData.builder()
-                        .symbol(ob.getString("symbol"))
-                        .token(ob.getString("token"))
-                        .name(ob.getString("name"))
-                        .expiry(getLocalDate(ob.getString("expiry")))
-                        .expiryString(ob.getString("expiry"))
-                        .strike(((int) Double.parseDouble(ob.optString("strike"))) / 100)
-                        .build();
-                cnt++;
+                if (ob.optString("expiry").equals(today)) {
+                    SymbolData symbolData = SymbolData.builder()
+                            .symbol(ob.getString("symbol"))
+                            .token(ob.getString("token"))
+                            .name(ob.getString("name"))
+                            .expiry(getLocalDate(ob.getString("expiry")))
+                            .expiryString(ob.getString("expiry"))
+                            .strike(((int) Double.parseDouble(ob.optString("strike"))) / 100)
+                            .build();
+                    cnt++;
 
-                if (Arrays.asList("NIFTY", "FINNIFTY", "MIDCPNIFTY", "BANKNIFTY", SENSEX).contains(symbolData.getName())
-                        && ("NFO".equals(ob.optString("exch_seg")) || BSE_NFO.equals(ob.optString("exch_seg")))) {
-                    if (ob.optString("expiry").contains(billMonthYear)) {
+                    if (Arrays.asList("NIFTY", "FINNIFTY", "MIDCPNIFTY", "BANKNIFTY", SENSEX).contains(symbolData.getName())
+                            && ("NFO".equals(ob.optString("exch_seg")) || BSE_NFO.equals(ob.optString("exch_seg")))) {
                         symbolDataList.add(symbolData);
-                        if (!oiMap.containsKey(symbolData.getName())) {
-                            //oiMap.put(symbolData.getSymbol(), 100);
-                        }
+                        matchedExpiries++;
+
                     }
                 }
             }
@@ -175,7 +175,8 @@ public class OITrackScheduler {
                     }
                 }
             });
-            log.info("Processed {} symbols. Oi change percent {}", symbolDataList.size(), configs.getOiPercent());
+            log.info("Processed {} symbols. Oi change percent {}. Matched Expiries {}, Non match expiries {} for today", symbolDataList.size(), configs.getOiPercent(),
+                    matchedExpiries, jsonArray.length() - matchedExpiries);
         } catch (Exception e) {
             log.error("Error in processing symbols at count {}, {}", cnt, e.getMessage());
         }

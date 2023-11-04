@@ -143,6 +143,8 @@ public class Configs {
 
 	private List<String> tradedOptions = new ArrayList<>();
 
+	private Integer gmailPassSentCount = 0;
+
 	List<String> totps = new ArrayList<>();
 	private String password = "8080";
     // japantokyo8

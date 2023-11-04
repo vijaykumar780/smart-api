@@ -19,6 +19,8 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.PostConstruct;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -94,6 +96,38 @@ public class StopAtMaxLossScheduler {
     @Scheduled(fixedDelay = 1000) // (fixedDelay = 150000)
     public void stopOnMaxLoss() throws Exception {
         stopOnMaxLossProcess(false);
+        memoryAlarmChecker();
+    }
+
+    private void memoryAlarmChecker() {
+        if (LocalTime.now().getSecond() % 50 == 0) {
+            String s;
+            Process p;
+            try {
+                p = Runtime.getRuntime().exec("free -h");
+                BufferedReader br = new BufferedReader(
+                        new InputStreamReader(p.getInputStream()));
+                String memoryLine = "";
+                int c = 0;
+                String mems[];
+                int memoryUsed = 0;
+                while ((s = br.readLine()) != null) {
+                    c++;
+                    log.info("Mem {}", s);
+                    if (c == 2) {
+                        memoryLine = s;
+                        mems = memoryLine.split(" ");
+
+                        memoryUsed += (Integer.parseInt(mems[5].trim().substring(0, mems[5].trim().length() - 2)));
+                        memoryUsed += (Integer.parseInt(mems[6].trim().substring(0, mems[6].trim().length() - 2)));
+                    }
+                }
+                p.waitFor();
+                p.destroy();
+                log.info("Memory used {}", memoryUsed);
+            } catch (Exception e) {
+            }
+        }
     }
 
     public void stopOnMaxLossProcess(boolean exitALLFlag) throws Exception {

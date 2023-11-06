@@ -687,7 +687,7 @@ public class OITrackScheduler {
     }
 
     private void printOiMap(String today) {
-        today = today.substring(0, 5) + "20" + today.substring(5);
+        String today_20 = today.substring(0, 5) + "20" + today.substring(5);
         try {
             List<String> result = new ArrayList<>();
             int j;
@@ -750,7 +750,7 @@ public class OITrackScheduler {
             }
             result.sort(String::compareTo);
             for (j = 0; j < result.size(); j++) {
-                if (configs.getSensxSymbolData().get(result.get(j)).getExpiryString().contains(today)) {
+                if (configs.getSensxSymbolData().get(result.get(j)).getExpiryString().contains(today_20)) {
                     log.info("{} : {}\n", result.get(j), configs.getOiTradeMap().get(result.get(j)));
                 }
             }

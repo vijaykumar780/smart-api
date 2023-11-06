@@ -2,12 +2,14 @@ package com.smartapi.controller;
 
 import com.smartapi.Configs;
 import com.smartapi.SmartApiApplication;
+import com.smartapi.pojo.SystemConfigs;
 import com.smartapi.service.OITrackScheduler;
 import com.smartapi.service.SendMessage;
 import com.smartapi.service.StopAtMaxLossScheduler;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -127,6 +129,37 @@ public class Controller {
         log.info("sending Mail");
         sendMessage.sendMessage("sending Mail");
         return "sending Mail";
+    }
+
+    @RequestMapping(value = "/getSystemConfigs", method = RequestMethod.GET, produces = "application/json")
+    public ResponseEntity<SystemConfigs> getSystemConfigs() {
+        SystemConfigs systemConfigs = null;
+        try {
+            systemConfigs = SystemConfigs.builder()
+                    .bankNiftyLotSize(configs.getBankNiftyLotSize())
+                    .finniftyLotSize(configs.getFinniftyLotSize())
+                    .niftyLotSize(configs.getNiftyLotSize())
+                    .midcapNiftyLotSize(configs.getMidcapNiftyLotSize())
+                    .sensexLotSize(configs.getSensexLotSize())
+                    .gmailPassSentCount(configs.getGmailPassSentCount())
+                    .maxLossAmount(configs.getMaxLossAmount())
+                    .oiBasedTradeBankNiftyQty(configs.getOiBasedTradeBankNiftyQty())
+                    .oiBasedTradeMidcapQty(configs.getOiBasedTradeMidcapQty())
+                    .oiBasedTradeQtyNifty(configs.getOiBasedTradeQtyNifty())
+                    .oiBasedTradeQtyFinNifty(configs.getOiBasedTradeQtyFinNifty())
+                    .oiBasedTradeSensexQty(configs.getOiBasedTradeSensexQty())
+                    .oiBasedTradePlaced(configs.getOiBasedTradePlaced())
+                    .totalMaxOrdersAllowed(configs.getTotalMaxOrdersAllowed())
+                    .tradedOptions(configs.getTradedOptions())
+                    .oiTradeMap(configs.getOiTradeMap())
+                    .oiPercent(configs.getOiPercent())
+                    .totalSymbolsLoaded(configs.getSymbolDataList().size())
+                    .build();
+
+        } catch (Exception e) {
+            log.error("Error in getting config details");
+        }
+        return new ResponseEntity<>(systemConfigs, HttpStatus.ACCEPTED);
     }
 
     /*

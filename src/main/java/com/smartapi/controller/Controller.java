@@ -2,6 +2,7 @@ package com.smartapi.controller;
 
 import com.smartapi.Configs;
 import com.smartapi.SmartApiApplication;
+import com.smartapi.pojo.OiTrade;
 import com.smartapi.pojo.SystemConfigs;
 import com.smartapi.service.OITrackScheduler;
 import com.smartapi.service.SendMessage;
@@ -21,8 +22,10 @@ import java.io.FileReader;
 import java.time.DayOfWeek;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RestController
@@ -142,6 +145,17 @@ public class Controller {
     public ResponseEntity<SystemConfigs> getSystemConfigs() {
         SystemConfigs systemConfigs = null;
         try {
+            List<String> tradedOptions = new ArrayList<>();
+            for (String s : configs.getTradedOptions()) {
+                tradedOptions.add(s);
+            }
+            tradedOptions.add("_");
+
+            List<String> optData = new ArrayList<>();
+            for (Map.Entry<String, OiTrade> entry : configs.getOiTradeMap().entrySet()) {
+                optData.add(entry.getKey()+ " : " + entry.getValue().getCeOi() " : " + entry.getValue().getPeOi());
+            }
+
             systemConfigs = SystemConfigs.builder()
                     .bankNiftyLotSize(configs.getBankNiftyLotSize())
                     .finniftyLotSize(configs.getFinniftyLotSize())
@@ -158,7 +172,7 @@ public class Controller {
                     .oiBasedTradePlaced(configs.getOiBasedTradePlaced())
                     .totalMaxOrdersAllowed(configs.getTotalMaxOrdersAllowed())
                     .tradedOptions(configs.getTradedOptions())
-                    .oiTradeMap(configs.getOiTradeMap())
+                    .oiTradeMap(optData)
                     .oiPercent(configs.getOiPercent())
                     .totalSymbolsLoaded(configs.getSymbolDataList().size())
                     .build();

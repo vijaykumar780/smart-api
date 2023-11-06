@@ -44,7 +44,7 @@ public class SystemConfigs {
 
     private int maxLossAmount;
 
-    private Map<String, OiTrade> oiTradeMap;
+    private List<String> oiTradeMap;
 
     private Boolean oiBasedTradePlaced;
 

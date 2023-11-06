@@ -155,6 +155,7 @@ public class Controller {
             for (Map.Entry<String, OiTrade> entry : configs.getOiTradeMap().entrySet()) {
                 optData.add(entry.getKey()+ " : " + entry.getValue().getCeOi() + " : " + entry.getValue().getPeOi());
             }
+            optData.sort(String::compareTo);
 
             systemConfigs = SystemConfigs.builder()
                     .bankNiftyLotSize(configs.getBankNiftyLotSize())

@@ -153,7 +153,7 @@ public class Controller {
 
             List<String> optData = new ArrayList<>();
             for (Map.Entry<String, OiTrade> entry : configs.getOiTradeMap().entrySet()) {
-                optData.add(entry.getKey()+ " : " + entry.getValue().getCeOi() " : " + entry.getValue().getPeOi());
+                optData.add(entry.getKey()+ " : " + entry.getValue().getCeOi() + " : " + entry.getValue().getPeOi());
             }
 
             systemConfigs = SystemConfigs.builder()

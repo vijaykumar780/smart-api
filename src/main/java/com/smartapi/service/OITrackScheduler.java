@@ -241,7 +241,7 @@ public class OITrackScheduler {
         incident found on today, when 19600 pe oi surpassed 19600 ce oi and 19600 pe became 0 from 12 to 0.
         similarly for 19650 strike.
          */
-        if (configs.getSymbolDataList().isEmpty()) {
+        if (configs.getSymbolDataList() == null || configs.getSymbolDataList().isEmpty()) {
             log.info("Loading symbols");
             init();
         }

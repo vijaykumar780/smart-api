@@ -136,7 +136,7 @@ public class OITrackScheduler {
                         || ob.optString("strike") == null || ob.optString("strike").isEmpty()) {
                     continue;
                 }
-                if (ob.optString("expiry").equals(today)) {
+                if (ob.optString("expiry").equalsIgnoreCase(today)) {
                     SymbolData symbolData = SymbolData.builder()
                             .symbol(ob.getString("symbol"))
                             .token(ob.getString("token"))

@@ -131,6 +131,13 @@ public class Controller {
         return "sending Mail";
     }
 
+    @GetMapping("/fetchSymbols")
+    public String fetchSymbols() {
+        log.info("Fetch symbols");
+        oiTrackScheduler.init();
+        return "Fetched symbols";
+    }
+
     @RequestMapping(value = "/getSystemConfigs", method = RequestMethod.GET, produces = "application/json")
     public ResponseEntity<SystemConfigs> getSystemConfigs() {
         SystemConfigs systemConfigs = null;

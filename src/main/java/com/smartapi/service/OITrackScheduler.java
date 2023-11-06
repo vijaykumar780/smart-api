@@ -11,6 +11,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.web.client.RestTemplateBuilder;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.http.*;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -90,7 +91,6 @@ public class OITrackScheduler {
         }
     }
 
-    @PostConstruct
     public int init() {
         int success = 0;
         oiMap = new HashMap<>();
@@ -175,6 +175,7 @@ public class OITrackScheduler {
                     }
                 }
             });
+            symbolDataList.add(SymbolData.builder().expiryString("03NOV2023").symbol("smbl").strike(1500).name("symb").token("tkn").build());
             log.info("Processed {} symbols. Oi change percent {}. Matched Expiries {}, Non match expiries {} for today", symbolDataList.size(), configs.getOiPercent(),
                     matchedExpiries, jsonArray.length() - matchedExpiries);
             jsonArray = null;
@@ -240,6 +241,11 @@ public class OITrackScheduler {
         incident found on today, when 19600 pe oi surpassed 19600 ce oi and 19600 pe became 0 from 12 to 0.
         similarly for 19650 strike.
          */
+        if (configs.getSymbolDataList().isEmpty()) {
+            log.info("Loading symbols");
+            init();
+        }
+
         String today = LocalDate.now().format(DateTimeFormatter.ofPattern("ddMMMyyyy"));
         today = today.substring(0,5) + today.substring(7);
         today = today.toUpperCase();

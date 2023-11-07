@@ -178,6 +178,7 @@ public class Controller {
                     .maxLossAmount(configs.getMaxLossAmount())
                     .mtm(configs.getMtm())
                     .maxProfit(configs.getMaxProfit())
+                    .memoryRemaining(configs.getRemainingMemory())
                     .build();
 
         } catch (Exception e) {

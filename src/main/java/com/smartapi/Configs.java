@@ -157,6 +157,8 @@ public class Configs {
 
 	int totalMaxOrdersAllowed = 300;
 
+	int remainingMemory = 50;
+
 	@Bean
 	PlacedOrders placedOrders() {
 		return new PlacedOrders();

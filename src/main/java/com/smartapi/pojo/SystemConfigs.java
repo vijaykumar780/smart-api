@@ -59,4 +59,6 @@ public class SystemConfigs {
     private int mtm;
 
     private int maxProfit;
+
+    int memoryRemaining;
 }

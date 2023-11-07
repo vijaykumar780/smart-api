@@ -886,7 +886,17 @@ public class OITrackScheduler {
 
     public void placeOrders(String tradeSymbol) throws Exception {
         String opt = "";
-        if (configs.isOiBasedTradeEnabled() && !configs.getOiBasedTradePlaced()) {
+        int mtm = configs.getMtm();
+        boolean isAnotherTradeAllowed = false;
+        boolean isBwAllowedTime = LocalTime.now().isBefore(LocalTime.of(14, 20));
+        if (mtm > 2500 && configs.isOiBasedTradeEnabled() && configs.getOiBasedTradePlaced() && isBwAllowedTime) {
+            log.info("Positive mtm found {}. Initiating another oi cross trade after closing previous trade", mtm);
+            sendMessage.sendMessage("Positive mtm found " + mtm +" . Initiating another oi cross trade after closing previous trade");
+            isAnotherTradeAllowed = true;
+            stopAtMaxLossScheduler.stopOnMaxLossProcess(true);
+        }
+
+        if ((configs.isOiBasedTradeEnabled() && !configs.getOiBasedTradePlaced()) || isAnotherTradeAllowed) {
             opt = "Oi based trade enabled. Initiating trade for " + tradeSymbol;
             log.info(opt);
             sendMessage.sendMessage(opt);

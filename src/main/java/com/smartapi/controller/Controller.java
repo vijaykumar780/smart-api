@@ -164,7 +164,6 @@ public class Controller {
                     .midcapNiftyLotSize(configs.getMidcapNiftyLotSize())
                     .sensexLotSize(configs.getSensexLotSize())
                     .gmailPassSentCount(configs.getGmailPassSentCount())
-                    .maxLossAmount(configs.getMaxLossAmount())
                     .oiBasedTradeBankNiftyQty(configs.getOiBasedTradeBankNiftyQty())
                     .oiBasedTradeMidcapQty(configs.getOiBasedTradeMidcapQty())
                     .oiBasedTradeQtyNifty(configs.getOiBasedTradeQtyNifty())
@@ -176,6 +175,9 @@ public class Controller {
                     .oiTradeMap(optData)
                     .oiPercent(configs.getOiPercent())
                     .totalSymbolsLoaded(configs.getSymbolDataList().size())
+                    .maxLossAmount(configs.getMaxLossAmount())
+                    .mtm(configs.getMtm())
+                    .maxProfit(configs.getMaxProfit())
                     .build();
 
         } catch (Exception e) {

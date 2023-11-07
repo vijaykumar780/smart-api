@@ -150,7 +150,7 @@ public class Configs {
     // japantokyo8
 
 	// current Profit or loss
-	int currentPL = 0;
+	int mtm = 0;
 
 	// max profit
 	int maxProfit = 0;

@@ -55,4 +55,8 @@ public class SystemConfigs {
     private int totalMaxOrdersAllowed;
 
     private int totalSymbolsLoaded;
+
+    private int mtm;
+
+    private int maxProfit;
 }

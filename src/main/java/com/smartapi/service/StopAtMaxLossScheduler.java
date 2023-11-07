@@ -145,7 +145,7 @@ public class StopAtMaxLossScheduler {
 
     public void stopOnMaxLossProcess(boolean exitALLFlag) throws Exception {
         LocalTime localStartTimeMarket = LocalTime.of(9,15,0);
-        LocalTime localEndTime = LocalTime.of(15,30,5);
+        LocalTime localEndTime = LocalTime.of(19,30,5);
         LocalTime localEndTimeMarket = LocalTime.of(15,30,1);
         LocalTime now = LocalTime.now();
         if (!(now.isAfter(localStartTimeMarket) && now.isBefore(localEndTime))) {
@@ -224,6 +224,8 @@ public class StopAtMaxLossScheduler {
 
         // Strict sl orders to prevent slippages
         processStrictSl(mtm, modifiedMaxLoss, ordersJsonArray, positionsJsonArray);
+        configs.setMtm(mtm.intValue());
+        configs.setMaxProfit((int) (sellamount - buyamount));
 
         if ((mtm <= 0 && Math.abs(mtm) >= modifiedMaxLoss) || exitALLFlag ||
                 isExitAllPosRequired || !isTradeAllowed) {

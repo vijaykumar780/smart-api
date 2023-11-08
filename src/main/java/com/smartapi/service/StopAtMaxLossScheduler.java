@@ -172,6 +172,8 @@ public class StopAtMaxLossScheduler {
         JSONArray positionsJsonArray = jsonObject.optJSONArray("data");
         if (positionsJsonArray == null || positionsJsonArray.isEmpty()) {
             log.info("Empty positions, skipping\n");
+            configs.setTotalPositions(0);
+
             return;
         }
 
@@ -227,6 +229,10 @@ public class StopAtMaxLossScheduler {
         processStrictSl(mtm, modifiedMaxLoss, ordersJsonArray, positionsJsonArray);
         configs.setMtm(mtm.intValue());
         configs.setMaxProfit((int) (sellamount - buyamount));
+        if (LocalTime.now().getHour()>=18 && LocalTime.now().getHour()<=23) {
+            configs.setMtm(0);
+            configs.setMaxProfit(0);
+        }
 
         if ((mtm <= 0 && Math.abs(mtm) >= modifiedMaxLoss) || exitALLFlag ||
                 isExitAllPosRequired || !isTradeAllowed) {
@@ -801,6 +807,7 @@ public class StopAtMaxLossScheduler {
                 for (i = 0; i < positionsJsonArray.length(); i++) {
                     JSONObject pos = positionsJsonArray.optJSONObject(i);
                     if (pos != null && pos.optString("netqty").contains("-")) {
+                        configs.setTotalPositions(configs.getTotalPositions() + 1);
                         sellOptionSymbol = pos.optString("tradingsymbol");
                         ltp = Double.valueOf(pos.optString("ltp"));
                         break;
@@ -888,7 +895,7 @@ public class StopAtMaxLossScheduler {
                     log.info(slHitReq);
                     sendMail(slHitReq);
 
-                    configs.setTradedOptions(new ArrayList<>());
+                    //configs.setTradedOptions(new ArrayList<>());
 
                 }
                 return slHitRequired || exitReqOnBasisOfOi;

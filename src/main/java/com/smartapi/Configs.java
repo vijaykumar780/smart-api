@@ -159,6 +159,8 @@ public class Configs {
 
 	int remainingMemory = 50;
 
+	int totalPositions = 0;
+
 	@Bean
 	PlacedOrders placedOrders() {
 		return new PlacedOrders();

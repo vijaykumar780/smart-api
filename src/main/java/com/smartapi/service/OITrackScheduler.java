@@ -46,7 +46,7 @@ public class OITrackScheduler {
 
     // oi based trade
     double diffInitial = 7.0;
-    double finalDiff = 13.0;
+    double finalDiff = 12.0;
 
     // Price for multiple sell trades
     double p1 = 25.0;
@@ -896,7 +896,14 @@ public class OITrackScheduler {
             stopAtMaxLossScheduler.stopOnMaxLossProcess(true);
         }
 
-        if ((configs.isOiBasedTradeEnabled() && !configs.getOiBasedTradePlaced()) || isAnotherTradeAllowed) {
+        boolean isMtmEligible = true;
+        if (mtm < 0 && Math.abs(mtm) >= configs.getMaxLossAmount()) {
+            isMtmEligible = false;
+        }
+
+        if ((configs.isOiBasedTradeEnabled() && !configs.getOiBasedTradePlaced())
+                || isAnotherTradeAllowed
+                || (configs.isOiBasedTradeEnabled() && configs.getTotalPositions() == 0 && isMtmEligible)) {
             opt = "Oi based trade enabled. Initiating trade for " + tradeSymbol;
             log.info(opt);
             sendMessage.sendMessage(opt);

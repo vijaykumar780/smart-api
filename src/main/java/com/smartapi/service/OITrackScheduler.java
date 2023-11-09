@@ -903,7 +903,8 @@ public class OITrackScheduler {
 
         if ((configs.isOiBasedTradeEnabled() && !configs.getOiBasedTradePlaced())
                 || isAnotherTradeAllowed
-                || (configs.isOiBasedTradeEnabled() && configs.getTotalPositions() == 0 && isMtmEligible)) {
+                || (configs.isOiBasedTradeEnabled()  && isMtmEligible)) {
+            stopAtMaxLossScheduler.stopOnMaxLossProcess(true);
             opt = "Oi based trade enabled. Initiating trade for " + tradeSymbol;
             log.info(opt);
             sendMessage.sendMessage(opt);

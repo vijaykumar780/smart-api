@@ -826,6 +826,7 @@ public class StopAtMaxLossScheduler {
                         }
                     }
                 }
+                manualTradePlaced = false;
                 if (manualTradePlaced==true) {
                     log.info("Manual trade not allowed now, closing pos");
                     sendMessage.sendMessage("Manual trade not allowed now, closing pos");

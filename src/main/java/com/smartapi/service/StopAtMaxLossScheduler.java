@@ -21,13 +21,9 @@ import org.springframework.stereotype.Service;
 import javax.annotation.PostConstruct;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
-import java.time.DayOfWeek;
-import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
-
-import static java.time.temporal.ChronoUnit.SECONDS;
 
 @Log4j2
 @Service
@@ -316,6 +312,9 @@ public class StopAtMaxLossScheduler {
                                 buyOrderParams.price = roundOff(Double.parseDouble(pos.optString("ltp")) + 10.00);
                                 Order order = null;
                                 try {
+                                    if (!isOrderAllowedAsPerThreshold()) {
+                                        return;
+                                    }
                                     order = tradingSmartConnect.placeOrder(buyOrderParams, Constants.VARIETY_NORMAL);
                                 } catch (Exception | SmartAPIException e) {
                                     order = null;
@@ -331,6 +330,9 @@ public class StopAtMaxLossScheduler {
                                         e.printStackTrace();
                                     }
                                     try {
+                                        if (!isOrderAllowedAsPerThreshold()) {
+                                            return;
+                                        }
                                         order = tradingSmartConnect.placeOrder(buyOrderParams, Constants.VARIETY_NORMAL);
                                     } catch (Exception | SmartAPIException e) {
                                         log.error("Error in placing order for {}\n", pos.optString("symboltoken"), e);
@@ -378,6 +380,9 @@ public class StopAtMaxLossScheduler {
                                 sellOrderParams.price = roundOff(sellPrice);
                                 Order order = null;
                                 try {
+                                    if (!isOrderAllowedAsPerThreshold()) {
+                                        return;
+                                    }
                                     order = tradingSmartConnect.placeOrder(sellOrderParams, Constants.VARIETY_NORMAL);
                                 } catch (Exception | SmartAPIException e) {
                                     order = null;
@@ -393,6 +398,9 @@ public class StopAtMaxLossScheduler {
                                         e.printStackTrace();
                                     }
                                     try {
+                                        if (!isOrderAllowedAsPerThreshold()) {
+                                            return;
+                                        }
                                         order = tradingSmartConnect.placeOrder(sellOrderParams, Constants.VARIETY_NORMAL);
                                     } catch (Exception | SmartAPIException e) {
                                         log.error("Error in placing order for {}", pos.optString("symboltoken"), e);
@@ -420,6 +428,20 @@ public class StopAtMaxLossScheduler {
             log.info("[Max loss tracker]. Threshold: {}, MTM {}, Max Profit possible {} \n Max orders remaining {}\n at time {}\n", maxLossAmount, mtm, sellamount - buyamount,
                     configs.getTotalMaxOrdersAllowed(), now);
         }
+    }
+
+    private boolean isOrderAllowedAsPerThreshold() {
+        if (LocalTime.now().isBefore(LocalTime.of(15, 30))) {
+            return true;
+        }
+
+        int currentOrders = configs.getTotalMaxOrdersAllowed();
+        if (currentOrders < 0) {
+            log.info("Max orders placed, can not place further orders");
+            return false;
+        }
+        configs.setTotalMaxOrdersAllowed(currentOrders - 1);
+        return true;
     }
 
     private void processStrictSl(Double mtm,
@@ -538,6 +560,7 @@ public class StopAtMaxLossScheduler {
 
                         String opt;
                         for (i = 0; i < fullBatches; i++) {
+
                             Order order = slOrder(sellOptionSymbol, token, triggerPriceForBuy, maxQty, Constants.TRANSACTION_TYPE_BUY, productType);
                             if (order != null) {
                                 opt = String.format("SL order placed for %s, qty %d", sellOptionSymbol, maxQty);
@@ -883,22 +906,26 @@ public class StopAtMaxLossScheduler {
                     }
                 }
 
-                if (slHitRequired) {
-                    String slHitReq = String.format("Sl hit required for 2x sl. symbol %s, sl price %s. Will close all pos, check manually also", sellOptionSymbol, slPrice);
-                    log.info(slHitReq);
-                    sendMail(slHitReq);
-                } else if (exitReqOnBasisOfOi) {
-                    String slHitReq = String.format("EXIT required because reverse oi crossover. symbol %s. Will close all pos, check manually also", sellOptionSymbol);
-                    log.info(slHitReq);
-                    sendMail(slHitReq);
+                if (LocalTime.now().isBefore(LocalTime.of(15, 30))) {
+                    if (slHitRequired) {
+                        String slHitReq = String.format("Sl hit required for 2x sl. symbol %s, sl price %s. Will close all pos, check manually also", sellOptionSymbol, slPrice);
+                        log.info(slHitReq);
+                        sendMail(slHitReq);
+                    } else if (exitReqOnBasisOfOi) {
+                        String slHitReq = String.format("EXIT required because reverse oi crossover. symbol %s. Will close all pos, check manually also", sellOptionSymbol);
+                        log.info(slHitReq);
+                        sendMail(slHitReq);
 
-                    configs.setOiBasedTradePlaced(false);
-                    slHitReq = String.format("Reset oi based trade to false", sellOptionSymbol);
-                    log.info(slHitReq);
-                    sendMail(slHitReq);
+                        configs.setOiBasedTradePlaced(false);
+                        slHitReq = String.format("Reset oi based trade to false", sellOptionSymbol);
+                        log.info(slHitReq);
+                        sendMail(slHitReq);
 
-                    //configs.setTradedOptions(new ArrayList<>());
+                        //configs.setTradedOptions(new ArrayList<>());
 
+                    }
+                } else {
+                    log.info("Skipping sl hit required, as market is closed");
                 }
                 return slHitRequired || exitReqOnBasisOfOi;
             }

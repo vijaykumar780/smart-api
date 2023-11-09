@@ -175,6 +175,8 @@ public class Configs {
 	private int finniftyValue = 20000;
 	private int midcapNiftyValue = 8000;
 
+	private double soldOptionLtp = 0.0;
+
 	//@Bean("tradingSmartConnect")
 	public SmartConnect TradingSmartConnect() throws Exception, SmartAPIException {
 		log.info("Setting trade placed");

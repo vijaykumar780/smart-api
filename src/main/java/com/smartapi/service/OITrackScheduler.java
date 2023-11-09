@@ -11,17 +11,14 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.web.client.RestTemplateBuilder;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.http.*;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
-import javax.annotation.PostConstruct;
 import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Log4j2
 @Service
@@ -542,7 +539,7 @@ public class OITrackScheduler {
                         int newCeOi = entry.getValue();
                         int newPeOi = oiMap.get(peSymbol);
                         if (newCeOi == oldCeOi && newPeOi == oldPeOi) {
-                            //log.info("Old and new ce an pe oi are same for symbol {}", symbol);
+                            //log.info("Old and new ce and pe oi are same for symbol {}", symbol);
                         } else {
                             boolean eligible = oiTrade.isEligible();
                             double diffPercent = ((double) Math.abs(newCeOi - newPeOi) / (double) Math.min(newCeOi, newPeOi));
@@ -823,12 +820,13 @@ public class OITrackScheduler {
             String op = String.format("Max oi based trade is being initiated for symbol %s", sellSymbol);
             log.info(op);
             sendMessage.sendMessage(op);
-            //placeOrders(sellSymbol);
-            if (sellSymbol.contains("MIDCPNIFTY")) {
-                placeOrdersForMaxOi(sellSymbol);
-            } else {
+
+            if (isMultiSubTrade(sellSymbol)) {
                 placeOrders(sellSymbol);
+            } else {
+                placeOrdersForMaxOi(sellSymbol);
             }
+
         }
 
         /**
@@ -855,6 +853,29 @@ public class OITrackScheduler {
          *             }
          *         }
          */
+    }
+
+    private boolean isMultiSubTrade(String sellSymbol) {
+        try {
+            String indexName = getIndexName(sellSymbol);
+            SymbolData sellSymbolData = fetchSellSymbol(sellSymbol);
+            Double sellLtp = getLtp(sellSymbolData.getToken(), indexName.equals(SENSEX) ? BSE_NFO : NSE_NFO);
+            if (indexName.equals("MIDCPNIFTY")) {
+                return sellLtp >= 2.5 ? true : false;
+            } else if (indexName.equals("NIFTY")) {
+                return sellLtp >= 5.0 ? true : false;
+            } else if (indexName.equals("BANKNIFTY")) {
+                return sellLtp >= 10.0 ? true : false;
+            } else if (indexName.equals(SENSEX)) {
+                return sellLtp >= 13.0 ? true : false;
+            } else { // finnifty
+                return sellLtp >= 5.0 ? true : false;
+            }
+        } catch (Exception e) {
+            log.error("Error in checking multi re trade ", e);
+
+        }
+        return true;
     }
 
     private String getOiContent(OptionData optionData, String today) {
@@ -884,26 +905,59 @@ public class OITrackScheduler {
         return false;
     }
 
-    public void placeOrders(String tradeSymbol) throws Exception {
-        String opt = "";
+    private boolean isNewTradeAllowed(String sellSymbol) {
         int mtm = configs.getMtm();
         boolean isAnotherTradeAllowed = false;
-        boolean isBwAllowedTime = LocalTime.now().isBefore(LocalTime.of(14, 20));
-        if (mtm > 2500 && configs.isOiBasedTradeEnabled() && configs.getOiBasedTradePlaced() && isBwAllowedTime) {
-            log.info("Positive mtm found {}. Initiating another oi cross trade after closing previous trade", mtm);
-            sendMessage.sendMessage("Positive mtm found " + mtm +" . Initiating another oi cross trade after closing previous trade");
+        boolean isBwAllowedTime = LocalTime.now().isBefore(LocalTime.of(15, 20));
+        if (isBwAllowedTime && (mtm >= 0 || (mtm < 0 && Math.abs(mtm) < configs.getMaxLossAmount()))) {
+            log.info("MTM: {}. Initiating another oi cross trade after closing previous trade", mtm);
+            sendMessage.sendMessage("MTM: " + mtm + " . Initiating another oi cross trade after closing previous trade");
+
             isAnotherTradeAllowed = true;
-            stopAtMaxLossScheduler.stopOnMaxLossProcess(true);
+        } else {
+            log.info("Can not initiate re oi cross over / max oi trade");
+            sendMessage.sendMessage("Can not initiate re oi cross over / max oi trade");
         }
 
-        boolean isMtmEligible = true;
-        if (mtm < 0 && Math.abs(mtm) >= configs.getMaxLossAmount()) {
-            isMtmEligible = false;
+        // check if new trade is more profitable
+
+        try {
+            String indexName = getIndexName(sellSymbol);
+            SymbolData sellSymbolData = fetchSellSymbol(sellSymbol);
+            Double sellLtp = getLtp(sellSymbolData.getToken(), indexName.equals(SENSEX) ? BSE_NFO : NSE_NFO);
+            if (sellLtp - configs.getSoldOptionLtp() >= 2.0) {
+                log.info("New sold pos has higher price");
+            } else {
+                log.info("New sold pos has lower price, skipping retrade");
+                isAnotherTradeAllowed = false;
+                sendMessage.sendMessage("New sold pos has lower price, skipping retrade");
+            }
+
+        } catch (Exception e) {
+            log.error("Error in fetching old pos data");
+            sendMessage.sendMessage("Error in fetching old pos data");
         }
 
+        if (isAnotherTradeAllowed) {
+            try {
+                stopAtMaxLossScheduler.stopOnMaxLossProcess(true);
+                log.info("Closed old pos for new re trade");
+                sendMessage.sendMessage("Closed old pos for new re trade");
+
+            } catch (Exception e) {
+                log.error("Error closing all pos for retrade ", e);
+                sendMessage.sendMessage("Error closing all pos for retrade");
+            }
+        }
+        return isAnotherTradeAllowed;
+    }
+
+    public void placeOrders(String tradeSymbol) throws Exception {
+        String opt = "";
+
+        boolean isAnotherTradeAllowed = isNewTradeAllowed(tradeSymbol);
         if ((configs.isOiBasedTradeEnabled() && !configs.getOiBasedTradePlaced())
-                || isAnotherTradeAllowed
-                || (configs.isOiBasedTradeEnabled() && configs.getTotalPositions() == 0 && isMtmEligible)) {
+                || isAnotherTradeAllowed) {
             opt = "Oi based trade enabled. Initiating trade for " + tradeSymbol;
             log.info(opt);
             sendMessage.sendMessage(opt);
@@ -1245,7 +1299,9 @@ public class OITrackScheduler {
 
     public void placeOrdersForMaxOi(String tradeSymbol) throws Exception {
         String opt = "";
-        if (configs.isOiBasedTradeEnabled() && !configs.getOiBasedTradePlaced()) {
+        boolean isAnotherTradeAllowed = isNewTradeAllowed(tradeSymbol);
+        if ((configs.isOiBasedTradeEnabled() && !configs.getOiBasedTradePlaced())
+                || isAnotherTradeAllowed) {
             opt = "Oi based trade enabled. Initiating trade for " + tradeSymbol;
             log.info(opt);
             sendMessage.sendMessage(opt);

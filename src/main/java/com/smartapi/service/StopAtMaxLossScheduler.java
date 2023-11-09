@@ -217,7 +217,7 @@ public class StopAtMaxLossScheduler {
             isTradeAllowed = false;
             String opt = "Check manually if all trades close. Time now is not allowed. Trade after 11:28";
             log.info(opt);
-            //sendMail(opt);
+            sendMail(opt);
         }
         Double modifiedMaxLoss = maxLossAmount;
         /*boolean nonExpMaxProfit = false;
@@ -239,7 +239,7 @@ public class StopAtMaxLossScheduler {
             log.info("Flags exitALLFlag {}, isExitAllPosRequired {}, isExitRequiredForReTradeAtSl {}\n Max orders remaing {}", exitALLFlag, isExitAllPosRequired,
                     isExitRequiredForReTradeAtSl, configs.getTotalMaxOrdersAllowed());
             if (mtm>0.0) {
-                sendMail("[SL] Max Profit reached. Profit: " + mtm);
+                sendMail("Closing positions, Profit: " + mtm);
                 log.info("Max Profit reached. Profit {}, starting to close all pos.\n", mtm);
             } else {
                 sendMail("[SL] Max MTM loss reached. Loss: " + mtm + " Threshold: " + modifiedMaxLoss);
@@ -777,7 +777,7 @@ public class StopAtMaxLossScheduler {
                         String error = String.format("Re-trade (whose sl was hit earlier) found for option at price above %s, for symbol %s. Will close all pos, check manually also", price, sellOptionSymbol);
                         log.error(error);
                         sendMail(error);
-                        // sold price is above 10 and its a retrade whose sl was hit earlier
+                        // sold price is above 10 and it is a retrade whose sl was hit earlier
                         return true;
                     }
                 }
@@ -810,6 +810,8 @@ public class StopAtMaxLossScheduler {
                         configs.setTotalPositions(configs.getTotalPositions() + 1);
                         sellOptionSymbol = pos.optString("tradingsymbol");
                         ltp = Double.valueOf(pos.optString("ltp"));
+                        configs.setSoldOptionLtp(ltp);
+
                         break;
                     }
                 }

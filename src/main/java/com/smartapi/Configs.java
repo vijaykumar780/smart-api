@@ -161,6 +161,8 @@ public class Configs {
 
 	int totalPositions = 0;
 
+	boolean isMaxOiBasedTradePlaced = false;
+
 	@Bean
 	PlacedOrders placedOrders() {
 		return new PlacedOrders();

@@ -153,7 +153,7 @@ public class Controller {
 
             List<String> optData = new ArrayList<>();
             for (Map.Entry<String, OiTrade> entry : configs.getOiTradeMap().entrySet()) {
-                optData.add(entry.getKey()+ " : " + entry.getValue().getCeOi() + " : " + entry.getValue().getPeOi());
+                optData.add(entry.getKey()+ " : " + entry.getValue().getCeOi() + " : " + entry.getValue().getPeOi() + " : " + "Diff : " + Math.abs(entry.getValue().getCeOi() - entry.getValue().getPeOi()));
             }
             optData.sort(String::compareTo);
 
@@ -179,10 +179,11 @@ public class Controller {
                     .mtm(configs.getMtm())
                     .maxProfit(configs.getMaxProfit())
                     .memoryRemaining(configs.getRemainingMemory())
+                    .isMaxOiBasedTradePlaced(configs.isMaxOiBasedTradePlaced())
                     .build();
 
         } catch (Exception e) {
-            log.error("Error in getting config details");
+            log.error("Error in getting config details", e);
         }
         return new ResponseEntity<>(systemConfigs, HttpStatus.ACCEPTED);
     }

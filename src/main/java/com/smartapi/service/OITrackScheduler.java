@@ -72,15 +72,25 @@ public class OITrackScheduler {
     @Scheduled(cron = "0 50 8 * * ?")
     public void reInitEmail() {
         int success = 0;
-        for (int i =0;i<10;i++) {
-            int status= init();
-            if (status==1) {
-                success=1;
+        for (int i = 0; i < 10; i++) {
+            int status = init();
+            if (status == 1) {
+                success = 1;
                 break;
             }
         }
-        if (success==1) {
-            sendMessage.sendMessage("Data loaded for symbols "+ configs.getSymbolDataList().size());
+        if (success == 1) {
+            StringBuilder content = new StringBuilder();
+            content.append("Total symbols loaded: " + configs.getSymbolDataList().size());
+            content.append("\n");
+
+            content.append("Max Oi based trade placed: " + configs.isMaxOiBasedTradePlaced() + "\n");
+            content.append("Gmail password sent count: " + configs.getGmailPassSentCount() + "\n");
+            content.append("Total max orders allowed: " + configs.getTotalMaxOrdersAllowed() + "\n");
+            content.append("Traded Options: " + configs.getTradedOptions() + "\n");
+            content.append("Oi Based trade placed: " + configs.getOiBasedTradePlaced() + "\n");
+
+            sendMessage.sendMessage(content.toString());
             log.info("Data loaded of symbols");
         } else {
             sendMessage.sendMessage("Failed data loaded for symbols");
@@ -764,6 +774,11 @@ public class OITrackScheduler {
     }
 
     private void trackMaxOiMail(String today) throws Exception {
+        if (configs.isMaxOiBasedTradePlaced()) {
+            log.info("Max oi based trade already placed, Returning from max oi based trade");
+            return;
+        }
+
         // If there is no oi based trade yet then send top 4 max oi strikes on expiry in descending order
         // after 14:35 (This is to done if there is no oi cross over found)
         LocalTime now = LocalTime.now();
@@ -826,7 +841,7 @@ public class OITrackScheduler {
             } else {
                 placeOrdersForMaxOi(sellSymbol);
             }
-
+            configs.setMaxOiBasedTradePlaced(true);
         }
 
         /**

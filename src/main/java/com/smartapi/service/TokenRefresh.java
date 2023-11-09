@@ -106,6 +106,7 @@ public class TokenRefresh {
         configs.setTotalMaxOrdersAllowed(300);
         configs.setSensxSymbolData(new HashMap<>());
         configs.setGmailPassSentCount(0);
+        configs.setMaxOiBasedTradePlaced(false);
         log.info("Re inited email count threshold");
     }
 

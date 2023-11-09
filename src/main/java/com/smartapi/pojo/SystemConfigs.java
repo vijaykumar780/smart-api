@@ -60,5 +60,7 @@ public class SystemConfigs {
 
     private int maxProfit;
 
-    int memoryRemaining;
+    private int memoryRemaining;
+
+    private boolean isMaxOiBasedTradePlaced;
 }

@@ -89,7 +89,7 @@ public class StopAtMaxLossScheduler {
                 Runtime.getRuntime().freeMemory()/1000000, Runtime.getRuntime().maxMemory()/1000000);
     }
 
-    @Scheduled(fixedDelay = 1000) // (fixedDelay = 150000)
+    //@Scheduled(fixedDelay = 1000) // (fixedDelay = 150000)
     public void stopOnMaxLoss() throws Exception {
         memoryAlarmChecker();
         stopOnMaxLossProcess(false);

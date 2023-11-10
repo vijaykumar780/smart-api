@@ -179,6 +179,8 @@ public class Configs {
 
 	private double soldOptionLtp = 0.0;
 
+	private Map<String, Integer> symbolToStrikeMap = new HashMap<>();
+
 	//@Bean("tradingSmartConnect")
 	public SmartConnect TradingSmartConnect() throws Exception, SmartAPIException {
 		log.info("Setting trade placed");

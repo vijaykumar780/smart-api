@@ -108,6 +108,8 @@ public class OITrackScheduler {
         configs.setOiBasedTradePlaced(false);
         configs.setTradedOptions(new ArrayList<>());
         configs.setSensxSymbolData(new HashMap<>());
+        configs.setSymbolToStrikeMap(new HashMap<>());
+
         log.info("Initializing rest template");
         restTemplate = new RestTemplateBuilder().setConnectTimeout(Duration.ofSeconds(10))
                 .setReadTimeout(Duration.ofSeconds(10))
@@ -164,7 +166,7 @@ public class OITrackScheduler {
                     }
                 }
             }
-            symbolDataList.sort(new Comparator<SymbolData>() {
+            /*symbolDataList.sort(new Comparator<SymbolData>() {
                 @Override
                 public int compare(SymbolData o1, SymbolData o2) {
                     if (o1.getStrike() < o2.getStrike()) {
@@ -183,7 +185,8 @@ public class OITrackScheduler {
                         return -1;
                     }
                 }
-            });
+            });*/
+
             symbolDataList.add(SymbolData.builder().expiryString("03NOV2023").symbol("smbl").strike(1500).name("symb").token("tkn").build());
             log.info("Processed {} symbols. Oi change percent {}. Matched Expiries {}, Non match expiries {} for today", symbolDataList.size(), configs.getOiPercent(),
                     matchedExpiries, jsonArray.length() - matchedExpiries);
@@ -243,7 +246,7 @@ public class OITrackScheduler {
 
     }
 
-    @Scheduled(cron = "0 * * * * *")
+    @Scheduled(fixedDelay = 5000)
     public void tradeOnBasisOfOi() throws Exception {
         /*
         if total ce oi surpass total pe oi for some specific strike, then initiate a trade. sold option whose oi is larger after surpass
@@ -253,6 +256,7 @@ public class OITrackScheduler {
         if (configs.getSymbolDataList() == null || configs.getSymbolDataList().isEmpty()) {
             log.info("Loading symbols");
             init();
+            log.info("Loaded symbols");
         }
 
         String today = LocalDate.now().format(DateTimeFormatter.ofPattern("ddMMMyyyy"));
@@ -313,7 +317,7 @@ public class OITrackScheduler {
             log.error("Error fetch index ltp", e);
         }
         if (!(now1.isAfter(localStartTimeMarket) && now1.isBefore(localEndTime))) {
-            return;
+            //return;
         }
 
         int oi;
@@ -325,6 +329,10 @@ public class OITrackScheduler {
         StringBuilder email = new StringBuilder();
         List<SymbolData> symbols = configs.getSymbolDataList();
         for (SymbolData symbolData : symbols) {
+            if (!configs.getSymbolToStrikeMap().containsKey(symbolData.getSymbol())) {
+                configs.getSymbolToStrikeMap().put(symbolData.getSymbol(), symbolData.getStrike());
+            }
+
             try {
                 if (symbolData.getName().equals("NIFTY") && (expiryDateNifty.equals(symbolData.getExpiry()) ||
                         getExpiryDate(DayOfWeek.WEDNESDAY).equals(symbolData.getExpiry())) && Math.abs(symbolData.getStrike() - niftyLtp) <= niftyDiff) {
@@ -864,7 +872,7 @@ public class OITrackScheduler {
                 }
 
                 if (entry.getKey().contains(today) || ((!senSxToday.isEmpty()) && senSxToday.contains(today))) { // expiry
-                    int diff = (int) Math.abs(indexPrice - entry.getValue().getStrike());
+                    int diff = (int) Math.abs(indexPrice - configs.getSymbolToStrikeMap().get(entry.getKey()));
 
                     if (diff < min1 && diff < min2) {
                         min2 = min1;

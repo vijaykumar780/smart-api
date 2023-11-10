@@ -588,7 +588,7 @@ public class OITrackScheduler {
                                     // reset
                                     log.info("Reset oi enabled to false after trade placed for ce/pe of {}\n", tradeSymbol);
                                     configs.getOiTradeMap().put(symbol, OiTrade.builder().ceOi(newCeOi)
-                                            .peOi(newPeOi).eligible(false).strike(configs.getSymbolMap().get(symbol).getStrike()).build());
+                                            .peOi(newPeOi).eligible(false).build());
 
                                     boolean traded = false;
                                     if (LocalDate.now().getDayOfWeek().equals(DayOfWeek.TUESDAY)) {
@@ -673,7 +673,7 @@ public class OITrackScheduler {
                                     }
                                     log.info("Oi updated for {} with enabled {}\n", symbol, eligible);
                                     configs.getOiTradeMap().put(symbol, OiTrade.builder().ceOi(newCeOi)
-                                            .peOi(newPeOi).eligible(eligible).strike(configs.getSymbolMap().get(symbol).getStrike()).build());
+                                            .peOi(newPeOi).eligible(eligible).build());
                                 }
                             } else {
                                 if (newCeOi > 0 && newPeOi > 0) {
@@ -686,7 +686,7 @@ public class OITrackScheduler {
                                         eligible = true;
                                     }
                                     configs.getOiTradeMap().put(symbol, OiTrade.builder().ceOi(newCeOi)
-                                            .peOi(newPeOi).eligible(eligible).strike(configs.getSymbolMap().get(symbol).getStrike()).build());
+                                            .peOi(newPeOi).eligible(eligible).build());
                                 }
                             }
                         }
@@ -703,7 +703,7 @@ public class OITrackScheduler {
                             }
                             log.info("Symbol: {} stored with initial CE OI: {}, PE OI: {}\n", symbol, ceOi, peOi);
                             configs.getOiTradeMap().put(symbol, OiTrade.builder().ceOi(ceOi)
-                                    .peOi(peOi).eligible(eligible).strike(configs.getSymbolMap().get(symbol).getStrike()).build());
+                                    .peOi(peOi).eligible(eligible).build());
                         }
                     }
                 }

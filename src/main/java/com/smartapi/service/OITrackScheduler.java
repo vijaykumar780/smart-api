@@ -504,7 +504,9 @@ public class OITrackScheduler {
                     }
 
                     oi = getOi(symbolData.getToken(), BSE_NFO);
-
+                    if (symbolData.getSymbol().equals("SENSEX23N1065000PE")) {
+                        oi = getOiTestData(880000);
+                    }
                     if (oi == -1) {
                         continue;
                     }
@@ -546,7 +548,7 @@ public class OITrackScheduler {
         if (LocalTime.now().isAfter(LocalTime.of(14, 10)) && !email.toString().isEmpty()) {
             sendMessage.sendMessage(email.toString());
         }
-
+        boolean traded = false;
         for (Map.Entry<String, Integer> entry : oiMap.entrySet()) {
             try {
                 String symbol = entry.getKey();
@@ -590,7 +592,6 @@ public class OITrackScheduler {
                                     configs.getOiTradeMap().put(symbol, OiTrade.builder().ceOi(newCeOi)
                                             .peOi(newPeOi).eligible(false).build());
 
-                                    boolean traded = false;
                                     if (LocalDate.now().getDayOfWeek().equals(DayOfWeek.TUESDAY)) {
                                         // finnifty only
                                         if (symbol.contains("FINNIFTY")) {
@@ -712,8 +713,9 @@ public class OITrackScheduler {
             }
         }
 
-        trackMaxOiMail(today, midcapLtp, finniftyLtp, bankNiftyLtp, niftyLtp, sensxLtp);
-        log.info("Finished tracking oi based trade\n");
+        if (!traded) {
+            trackMaxOiMail(today, midcapLtp, finniftyLtp, bankNiftyLtp, niftyLtp, sensxLtp);
+        }
 
         log.info("Oi based trade Map\n");
         printOiMap(today);
@@ -978,7 +980,7 @@ public class OITrackScheduler {
             return oi;
         } else if (ceCount == 1) {
             ceCount++;
-            return 341570;
+            return 3090000;
         } else {
             ceCount++;
             return 435435343;

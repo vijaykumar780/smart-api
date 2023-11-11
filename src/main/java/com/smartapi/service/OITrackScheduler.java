@@ -1063,7 +1063,7 @@ public class OITrackScheduler {
             Double price = 0.0;
 
             SymbolData sellSymbolData = fetchSellSymbol(tradeSymbol);
-            opt = "Oi based trade enabled. Initiating trade for " + sellSymbolData.getName();
+            opt = "Oi based trade enabled. Initiating trade for " + sellSymbolData.getSymbol();
             log.info(opt);
             sendMessage.sendMessage(opt);
             int strikeDiff;
@@ -1404,7 +1404,7 @@ public class OITrackScheduler {
             Double price = 0.0;
 
             SymbolData sellSymbolData = fetchSellSymbol(tradeSymbol);
-            opt = "Oi based trade enabled. Initiating trade for " + sellSymbolData.getName();
+            opt = "Oi based trade enabled. Initiating trade for " + sellSymbolData.getSymbol();
             log.info(opt);
             sendMessage.sendMessage(opt);
             int strikeDiff;

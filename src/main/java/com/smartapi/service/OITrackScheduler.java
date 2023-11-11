@@ -875,6 +875,9 @@ public class OITrackScheduler {
                     } else if (diff > min1 && diff < min2) {
                         min2 = diff;
                         symbol2 = entry.getKey();
+                    } else if (diff == min1) {
+                        min2 = diff;
+                        symbol2 = entry.getKey();
                     } else {
 
                     }

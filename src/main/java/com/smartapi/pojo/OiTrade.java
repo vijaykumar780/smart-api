@@ -9,5 +9,4 @@ public class OiTrade {
     int ceOi;
     int peOi;
     boolean eligible;
-    int strike;
 }

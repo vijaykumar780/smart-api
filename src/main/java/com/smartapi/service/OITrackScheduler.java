@@ -246,7 +246,7 @@ public class OITrackScheduler {
 
     }
 
-    @Scheduled(fixedDelay = 5000)
+    @Scheduled(cron = "0 * * * * *")
     public void tradeOnBasisOfOi() throws Exception {
         /*
         if total ce oi surpass total pe oi for some specific strike, then initiate a trade. sold option whose oi is larger after surpass
@@ -317,7 +317,7 @@ public class OITrackScheduler {
             log.error("Error fetch index ltp", e);
         }
         if (!(now1.isAfter(localStartTimeMarket) && now1.isBefore(localEndTime))) {
-            //return;
+            return;
         }
 
         int oi;
@@ -504,9 +504,7 @@ public class OITrackScheduler {
                     }
 
                     oi = getOi(symbolData.getToken(), BSE_NFO);
-                    if (symbolData.getSymbol().equals("SENSEX23N1065000PE")) {
-                        oi = getOiTestData(880000);
-                    }
+
                     if (oi == -1) {
                         continue;
                     }

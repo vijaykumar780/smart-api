@@ -334,8 +334,7 @@ public class OITrackScheduler {
             }
 
             try {
-                if (symbolData.getName().equals("NIFTY") && (expiryDateNifty.equals(symbolData.getExpiry()) ||
-                        getExpiryDate(DayOfWeek.WEDNESDAY).equals(symbolData.getExpiry())) && Math.abs(symbolData.getStrike() - niftyLtp) <= niftyDiff) {
+                if (symbolData.getName().equals("NIFTY") && Math.abs(symbolData.getStrike() - niftyLtp) <= niftyDiff) {
                     String name = "";
                     name = name + "NIFTY_";
                     name = name + symbolData.getStrike() + "_" + (symbolData.getSymbol().endsWith("CE") ? "CE" : "PE");
@@ -374,8 +373,8 @@ public class OITrackScheduler {
                         //log.info("OI Data | {}", response);
                     }
 
-                } else if (symbolData.getName().equals("FINNIFTY") && (expiryDateFinNifty.equals(symbolData.getExpiry()) || getExpiryDate(DayOfWeek.MONDAY).equals(symbolData.getExpiry()))
-                        && Math.abs(symbolData.getStrike() - finniftyLtp) <= finniftyDiff) {
+                }
+                if (symbolData.getName().equals("FINNIFTY") && Math.abs(symbolData.getStrike() - finniftyLtp) <= finniftyDiff) {
                     String name = "";
                     name = name + "FINNIFTY_";
                     name = name + symbolData.getStrike() + "_" + (symbolData.getSymbol().endsWith("CE") ? "CE" : "PE");
@@ -412,8 +411,8 @@ public class OITrackScheduler {
 
                         //log.info("OI Data | {}", response);
                     }
-                } else if (symbolData.getName().equals("MIDCPNIFTY") && (expiryDateMidcapNifty.equals(symbolData.getExpiry())
-                || getExpiryDate(DayOfWeek.FRIDAY).equals(symbolData.getExpiry())) && Math.abs(symbolData.getStrike() - midcapLtp) <= midcapDiff) {
+                }
+                if (symbolData.getName().equals("MIDCPNIFTY") && Math.abs(symbolData.getStrike() - midcapLtp) <= midcapDiff) {
                     String name = "";
                     name = name + "MIDCPNIFTY_";
                     name = name + symbolData.getStrike() + "_" + (symbolData.getSymbol().endsWith("CE") ? "CE" : "PE");
@@ -426,6 +425,9 @@ public class OITrackScheduler {
                         continue;
                     }
 
+                    /*if (symbolData.getSymbol().equals("MIDCPNIFTY13NOV239175CE")) {
+                        oi = getOiTestData(490650);
+                    }*/
                     if (oiMap.containsKey(symbolData.getSymbol())) {
                         double changePercent;
                         if (oiMap.get(symbolData.getSymbol()) == 0) {
@@ -451,8 +453,8 @@ public class OITrackScheduler {
 
                         //log.info("OI Data | {}", response);
                     }
-                } else if (symbolData.getName().equals("BANKNIFTY") && (expiryDateBankNifty.equals(symbolData.getExpiry()) || getExpiryDate(DayOfWeek.TUESDAY).equals(symbolData.getExpiry()))
-                        && Math.abs(symbolData.getStrike() - bankNiftyLtp) <= bankNiftyDiff) {
+                }
+                if (symbolData.getName().equals("BANKNIFTY") && Math.abs(symbolData.getStrike() - bankNiftyLtp) <= bankNiftyDiff) {
                     String name = "";
                     name = name + "BANKNIFTY_";
                     name = name + symbolData.getStrike() + "_" + (symbolData.getSymbol().endsWith("CE") ? "CE" : "PE");
@@ -491,8 +493,8 @@ public class OITrackScheduler {
                         //log.info("OI Data | {}", response);
                     }
 
-                } else if (symbolData.getName().equals(SENSEX) && expirySenSex.equals(symbolData.getExpiry())
-                        && Math.abs(symbolData.getStrike() - sensxLtp) <= senSxDiff) {
+                }
+                if (symbolData.getName().equals(SENSEX) && Math.abs(symbolData.getStrike() - sensxLtp) <= senSxDiff) {
                     String name = "";
                     name = name + SENSEX + "_";
                     name = name + symbolData.getStrike() + "_" + (symbolData.getSymbol().endsWith("CE") ? "CE" : "PE");
@@ -732,9 +734,7 @@ public class OITrackScheduler {
             }
             result.sort(String::compareTo);
             for (j = 0; j < result.size(); j++) {
-                if (result.get(j).contains(today)) {
-                    log.info("{} : {}\n", result.get(j), configs.getOiTradeMap().get(result.get(j)));
-                }
+                log.info("{} : {}\n", result.get(j), configs.getOiTradeMap().get(result.get(j)));
             }
             result.clear();
 
@@ -745,9 +745,7 @@ public class OITrackScheduler {
             }
             result.sort(String::compareTo);
             for (j = 0; j < result.size(); j++) {
-                if (result.get(j).contains(today)) {
-                    log.info("{} : {}\n", result.get(j), configs.getOiTradeMap().get(result.get(j)));
-                }
+                log.info("{} : {}\n", result.get(j), configs.getOiTradeMap().get(result.get(j)));
             }
             result.clear();
 
@@ -758,9 +756,7 @@ public class OITrackScheduler {
             }
             result.sort(String::compareTo);
             for (j = 0; j < result.size(); j++) {
-                if (result.get(j).contains(today)) {
-                    log.info("{} : {}\n", result.get(j), configs.getOiTradeMap().get(result.get(j)));
-                }
+                log.info("{} : {}\n", result.get(j), configs.getOiTradeMap().get(result.get(j)));
             }
             result.clear();
 
@@ -771,9 +767,7 @@ public class OITrackScheduler {
             }
             result.sort(String::compareTo);
             for (j = 0; j < result.size(); j++) {
-                if (result.get(j).contains(today)) {
-                    log.info("{} : {}\n", result.get(j), configs.getOiTradeMap().get(result.get(j)));
-                }
+                log.info("{} : {}\n", result.get(j), configs.getOiTradeMap().get(result.get(j)));
             }
 
             result.clear();
@@ -784,9 +778,7 @@ public class OITrackScheduler {
             }
             result.sort(String::compareTo);
             for (j = 0; j < result.size(); j++) {
-                if (configs.getSensxSymbolData().get(result.get(j)).getExpiryString().contains(today_20)) {
-                    log.info("{} : {}\n", result.get(j), configs.getOiTradeMap().get(result.get(j)));
-                }
+                log.info("{} : {}\n", result.get(j), configs.getOiTradeMap().get(result.get(j)));
             }
             result.clear();
         } catch (Exception e) {
@@ -978,7 +970,7 @@ public class OITrackScheduler {
             return oi;
         } else if (ceCount == 1) {
             ceCount++;
-            return 3090000;
+            return 529275;
         } else {
             ceCount++;
             return 435435343;
@@ -1014,13 +1006,12 @@ public class OITrackScheduler {
             SymbolData sellSymbolData = fetchSellSymbol(sellSymbol);
             Double sellLtp = getLtp(sellSymbolData.getToken(), indexName.equals(SENSEX) ? BSE_NFO : NSE_NFO);
             if (sellLtp - configs.getSoldOptionLtp() >= 2.0) {
-                log.info("New sold pos has higher price");
+                log.info("New sold pos has higher price. Old pos ltp: {}, New pos ltp: {}", configs.getSoldOptionLtp(), sellLtp);
             } else {
                 log.info("New sold pos has lower price, skipping retrade");
                 isAnotherTradeAllowed = false;
-                sendMessage.sendMessage("New sold pos has lower price, skipping retrade");
+                sendMessage.sendMessage("New sold pos has lower price for symbol " + sellSymbolData.getSymbol() + " skipping retrade");
             }
-
         } catch (Exception e) {
             log.error("Error in fetching old pos data");
             sendMessage.sendMessage("Error in fetching old pos data");
@@ -1046,9 +1037,7 @@ public class OITrackScheduler {
         boolean isAnotherTradeAllowed = isNewTradeAllowed(tradeSymbol);
         if ((configs.isOiBasedTradeEnabled() && !configs.getOiBasedTradePlaced())
                 || isAnotherTradeAllowed) {
-            opt = "Oi based trade enabled. Initiating trade for " + tradeSymbol;
-            log.info(opt);
-            sendMessage.sendMessage(opt);
+
             int qty;
             String indexName = getIndexName(tradeSymbol);
             int maxQty = 500;
@@ -1071,6 +1060,9 @@ public class OITrackScheduler {
             Double price = 0.0;
 
             SymbolData sellSymbolData = fetchSellSymbol(tradeSymbol);
+            opt = "Oi based trade enabled. Initiating trade for " + sellSymbolData.getName();
+            log.info(opt);
+            sendMessage.sendMessage(opt);
             int strikeDiff;
 
             strikeDiff = 100; // used for buy order
@@ -1390,9 +1382,7 @@ public class OITrackScheduler {
         boolean isAnotherTradeAllowed = isNewTradeAllowed(tradeSymbol);
         if ((configs.isOiBasedTradeEnabled() && !configs.getOiBasedTradePlaced())
                 || isAnotherTradeAllowed) {
-            opt = "Oi based trade enabled. Initiating trade for " + tradeSymbol;
-            log.info(opt);
-            sendMessage.sendMessage(opt);
+
             int qty;
             String indexName = getIndexName(tradeSymbol);
             int maxQty = 500;
@@ -1411,6 +1401,9 @@ public class OITrackScheduler {
             Double price = 0.0;
 
             SymbolData sellSymbolData = fetchSellSymbol(tradeSymbol);
+            opt = "Oi based trade enabled. Initiating trade for " + sellSymbolData.getName();
+            log.info(opt);
+            sendMessage.sendMessage(opt);
             int strikeDiff;
 
             strikeDiff = 100; // used for buy order

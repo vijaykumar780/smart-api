@@ -89,7 +89,7 @@ public class StopAtMaxLossScheduler {
                 Runtime.getRuntime().freeMemory()/1000000, Runtime.getRuntime().maxMemory()/1000000);
     }
 
-    @Scheduled(fixedDelay = 1000)
+    @Scheduled(fixedDelay = 4000)
     public void stopOnMaxLoss() throws Exception {
         memoryAlarmChecker();
         stopOnMaxLossProcess(false);
@@ -156,7 +156,25 @@ public class StopAtMaxLossScheduler {
         JSONObject jsonObject = historySmartConnect.getPosition();
         if (jsonObject == null) {
             Thread.sleep(1100);
-            log.info("Re-fetch positions");
+            log.info("Re-fetch positions. Count 1");
+            init();
+            jsonObject = historySmartConnect.getPosition();
+        }
+        if (jsonObject == null) {
+            Thread.sleep(1100);
+            log.info("Re-fetch positions. Count 2");
+            init();
+            jsonObject = historySmartConnect.getPosition();
+        }
+        if (jsonObject == null) {
+            Thread.sleep(1100);
+            log.info("Re-fetch positions. Count 3");
+            init();
+            jsonObject = historySmartConnect.getPosition();
+        }
+        if (jsonObject == null) {
+            Thread.sleep(1100);
+            log.info("Re-fetch positions. Count 4");
             init();
             jsonObject = historySmartConnect.getPosition();
         }
@@ -176,8 +194,15 @@ public class StopAtMaxLossScheduler {
         //log.info(positionsJsonArray.toString());
         JSONObject orders = marketSmartConnect.getOrderHistory("v122968");
         if (orders == null) {
-            log.info("Re-fetch orders");
+            log.info("Re-fetch orders. Count 1");
             Thread.sleep(1100);
+            init();
+            orders = marketSmartConnect.getOrderHistory("v122968");
+        }
+        if (orders == null) {
+            log.info("Re-fetch orders. Count 2");
+            Thread.sleep(1100);
+            init();
             orders = marketSmartConnect.getOrderHistory("v122968");
         }
 

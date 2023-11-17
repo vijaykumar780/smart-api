@@ -474,7 +474,7 @@ public class StopAtMaxLossScheduler {
                                  JSONArray ordersJsonArray,
                                  JSONArray positionsJsonArray) {
         try {
-            double triggerLossForStrictSl = 0.7 * modifiedMaxLoss;
+            double triggerLossForStrictSl = 0.62 * modifiedMaxLoss;
             double triggerLoss50Percent = 0.5 * modifiedMaxLoss;
             double triggerLossForPreStrictSl = 0.3 * modifiedMaxLoss; // Cut around 30 % of pos after reaching 50 % loss
             // actual order will be placed for 50 % loss

@@ -65,7 +65,7 @@ public class OITrackScheduler {
     // Due to volatility keep disable midcp nifty cross over trade
     boolean isMidcpNiftyOiCrossTradeEnabled = true; // after 2.30 pm only
 
-    boolean isSensexOiCrossTradeEnabled = true; // after 2.30 pm only
+    boolean isSensexOiCrossTradeEnabled = false; // after 2.30 pm only
 
     private String SENSEX = "SENSEX";
 
@@ -804,7 +804,8 @@ public class OITrackScheduler {
         int maxOi2 = 0;
         String symbol1 = "";
         String symbol2 = "";
-        if (now.isAfter(LocalTime.of(14, 28))) {
+        if ((LocalDate.now().getDayOfWeek().equals(DayOfWeek.THURSDAY) && now.isAfter(LocalTime.of(14, 52))) ||
+                (!LocalDate.now().getDayOfWeek().equals(DayOfWeek.THURSDAY) && now.isAfter(LocalTime.of(14, 28)))) {
             for (Map.Entry<String, OiTrade> entry : configs.getOiTradeMap().entrySet()) {
                 String senSxToday = "";
                 if (entry.getKey().startsWith(SENSEX)) {
@@ -903,6 +904,13 @@ public class OITrackScheduler {
                 log.info(op);
                 sendMessage.sendMessage(op);
 
+                if (sellSymbol.contains(SENSEX)) {
+                    op = String.format("Skip trade");
+                    log.info(op);
+                    sendMessage.sendMessage(op);
+
+                    return;
+                }
                 if (isMultiSubTrade(sellSymbol)) {
                     placeOrders(sellSymbol);
                 } else {

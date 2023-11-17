@@ -897,20 +897,13 @@ public class OITrackScheduler {
 
             log.info("Symbols. S1: {}, S2: {}, diff1: {}, diff2: {}", symbol1, symbol2, diff1, diff2);
 
-            if (!symbol.isEmpty()) {
+            if (!symbol.isEmpty() && !symbol.contains(SENSEX)) {
                 String sellSymbol = configs.getOiTradeMap().get(symbol).getCeOi() > configs.getOiTradeMap().get(symbol).getPeOi()
                         ? symbol : symbol.replace("CE", "PE");
                 String op = String.format("Max oi based trade is being initiated for symbol %s. Oi diff: %d", sellSymbol, Math.max(diff2, diff1));
                 log.info(op);
                 sendMessage.sendMessage(op);
-
-                if (sellSymbol.contains(SENSEX)) {
-                    op = String.format("Skip trade");
-                    log.info(op);
-                    sendMessage.sendMessage(op);
-
-                    return;
-                }
+                
                 if (isMultiSubTrade(sellSymbol)) {
                     placeOrders(sellSymbol);
                 } else {

@@ -60,10 +60,10 @@ public class StopAtMaxLossScheduler {
         GoogleAuthenticator gAuth = new GoogleAuthenticator();
         totp = String.valueOf(gAuth.getTotpPassword(configs.getTotp()));
 
-        log.info("Initiating smart connects. Using totp {}", totp);
+        log.info(com.smartapi.Constants.IMP_LOG+"Initiating smart connects. Using totp {}", totp);
         for (int i = 0; i <= 5; i++) {
             try {
-                log.info("Re-initiating session");
+                log.info(com.smartapi.Constants.IMP_LOG+"Re-initiating session");
                 this.tradingSmartConnect = TradingSmartConnect(totp);
                 this.marketSmartConnect = MarketSmartConnect(totp);
                 this.historySmartConnect = historySmartConnect(totp);
@@ -71,14 +71,14 @@ public class StopAtMaxLossScheduler {
                 initCt = true;
                 break;
             } catch (Exception | SmartAPIException e) {
-                log.error("Error in re-init session, Retrying ", e);
+                log.error(com.smartapi.Constants.IMP_LOG+"Error in re-init session, Retrying ", e);
             }
         }
         if (initCt == false) {
             sendMessage.sendMessage("Failed to re init session");
-            log.info("Reinited failed");
+            log.info(com.smartapi.Constants.IMP_LOG+"Reinited failed");
         } else {
-            log.info("Reinited success");
+            log.info(com.smartapi.Constants.IMP_LOG+"Reinited success");
         }
     }
 
@@ -156,30 +156,30 @@ public class StopAtMaxLossScheduler {
         JSONObject jsonObject = historySmartConnect.getPosition();
         if (jsonObject == null) {
             Thread.sleep(1100);
-            log.info("Re-fetch positions. Count 1");
+            log.info(com.smartapi.Constants.IMP_LOG+"Re-fetch positions. Count 1");
             init();
             jsonObject = historySmartConnect.getPosition();
         }
         if (jsonObject == null) {
             Thread.sleep(1100);
-            log.info("Re-fetch positions. Count 2");
+            log.info(com.smartapi.Constants.IMP_LOG+"Re-fetch positions. Count 2");
             init();
             jsonObject = historySmartConnect.getPosition();
         }
         if (jsonObject == null) {
             Thread.sleep(1100);
-            log.info("Re-fetch positions. Count 3");
+            log.info(com.smartapi.Constants.IMP_LOG+"Re-fetch positions. Count 3");
             init();
             jsonObject = historySmartConnect.getPosition();
         }
         if (jsonObject == null) {
             Thread.sleep(1100);
-            log.info("Re-fetch positions. Count 4");
+            log.info(com.smartapi.Constants.IMP_LOG+"Re-fetch positions. Count 4");
             init();
             jsonObject = historySmartConnect.getPosition();
         }
         if (jsonObject == null) {
-            log.error("Failed to fetch positions");
+            log.error(com.smartapi.Constants.IMP_LOG+"Failed in fetching positions");
             return;
         }
 
@@ -254,17 +254,21 @@ public class StopAtMaxLossScheduler {
             configs.setMtm(0);
             configs.setMaxProfit(0);
         }
-
+        boolean allClosed = areAllPosClosed(positionsJsonArray);
         if ((mtm <= 0 && Math.abs(mtm) >= modifiedMaxLoss) || exitALLFlag ||
                 isExitAllPosRequired || !isTradeAllowed) {
-            log.info("Flags exitALLFlag {}, isExitAllPosRequired {}, isExitRequiredForReTradeAtSl {}\n Max orders remaing {}", exitALLFlag, isExitAllPosRequired,
+            log.info(com.smartapi.Constants.IMP_LOG+"Flags exitALLFlag {}, isExitAllPosRequired {}, isExitRequiredForReTradeAtSl {}\n Max orders remaing {}", exitALLFlag, isExitAllPosRequired,
                     isExitRequiredForReTradeAtSl, configs.getTotalMaxOrdersAllowed());
             if (mtm>0.0) {
-                sendMail("Closing positions, Profit: " + mtm);
-                log.info("Max Profit reached. Profit {}, starting to close all pos.\n", mtm);
+                if (!allClosed) {
+                    sendMail("Closing positions, Profit: " + mtm);
+                }
+                log.info(com.smartapi.Constants.IMP_LOG+"Max Profit reached. Profit {}, starting to close all pos.\n", mtm);
             } else {
-                sendMail("[SL] Max MTM loss reached. Loss: " + mtm + " Threshold: " + modifiedMaxLoss);
-                log.info("Max MTM loss reached. Loss {}. maxLossAmount {}, starting to close all pos.\n", mtm, modifiedMaxLoss);
+                if (!allClosed) {
+                    sendMail("[SL] Max MTM loss reached. Loss: " + mtm + " Threshold: " + modifiedMaxLoss);
+                }
+                log.info(com.smartapi.Constants.IMP_LOG+"Max MTM loss reached. Loss {}. maxLossAmount {}, starting to close all pos.\n", mtm, modifiedMaxLoss);
             }
             try {
                 log.info("Fetched orders {}\n", ordersJsonArray.toString());
@@ -275,7 +279,9 @@ public class StopAtMaxLossScheduler {
             int currentOrders = configs.getTotalMaxOrdersAllowed();
             if (currentOrders < 0) {
                 log.info("Max orders placed, can not place further orders");
-                sendMessage.sendMessage("Max orders placed, can not place further orders");
+                if (!allClosed) {
+                    sendMessage.sendMessage("Max orders placed, can not place further orders");
+                }
                 return;
             }
             configs.setTotalMaxOrdersAllowed(currentOrders - 1);
@@ -347,7 +353,7 @@ public class StopAtMaxLossScheduler {
                                 }
 
                                 if (order == null) {
-                                    log.info("Buy order failed to processed, retrying\n");
+                                    log.info("Buy order failed processed, retrying\n");
                                     init();
                                     try {
                                         Thread.sleep(200);
@@ -415,7 +421,7 @@ public class StopAtMaxLossScheduler {
                                 }
 
                                 if (order == null) {
-                                    log.info("Sell order failed to processed, retrying");
+                                    log.info("Sell order failed processed, retrying");
                                     init();
                                     try {
                                         Thread.sleep(200);
@@ -441,7 +447,9 @@ public class StopAtMaxLossScheduler {
                 }
             }
             log.info("[Probable closed all positions]. Validate manually\n");
-            sendMail("[SL] [Probable closed all positions]. Validate manually\n");
+            if (!allClosed) {
+                sendMail("[SL] [Probable closed all positions]. Validate manually\n");
+            }
             try {
                 configs.setMaxLossEmailCount(configs.getMaxLossEmailCount() - 1);
                 configs.setSlHitSmsSent(true);
@@ -639,7 +647,7 @@ public class StopAtMaxLossScheduler {
                 double netQty = 1.0;
                 String productType = "";
                 String token = "";
-                log.info("Trying placing pre sl order as loss at current loss of mtm {}, L1 {}, L2 {}", mtm, triggerLossForPreStrictSl, triggerLoss50Percent);
+                log.info(com.smartapi.Constants.IMP_LOG+"Trying placing pre sl order as loss at current loss of mtm {}, L1 {}, L2 {}", mtm, triggerLossForPreStrictSl, triggerLoss50Percent);
 
                 for (i = 0; i < positionsJsonArray.length(); i++) {
                     JSONObject pos = positionsJsonArray.optJSONObject(i);
@@ -729,7 +737,7 @@ public class StopAtMaxLossScheduler {
                 }
             }
         } catch (Exception e) {
-            log.error("Error in sl trigger trades", e);
+            log.error(com.smartapi.Constants.IMP_LOG+"Error in sl trigger trades", e);
         }
     }
 
@@ -842,6 +850,25 @@ public class StopAtMaxLossScheduler {
         return false;
     }*/
 
+    private boolean areAllPosClosed(JSONArray positionsJsonArray) {
+        int i;
+        try {
+            if (positionsJsonArray == null) {
+                return false;
+            }
+            for (i = 0; i < positionsJsonArray.length(); i++) {
+                JSONObject pos = positionsJsonArray.optJSONObject(i);
+                if (pos != null && !pos.optString("netqty").equals("0")) {
+                    return false;
+                }
+            }
+            return true;
+        } catch (Exception e) {
+            log.error("Error in finding if all pos closed", e);
+        }
+        return false;
+    }
+
     private boolean fetch2xSlOnPositions(JSONArray ordersJsonArray, JSONArray positionsJsonArray) {
         try {
             int i;
@@ -878,7 +905,7 @@ public class StopAtMaxLossScheduler {
                 }
                 if (manualTradePlaced==true) {
                     log.info("Manual trade not allowed now, closing pos");
-                    sendMessage.sendMessage("Manual trade not allowed now, closing pos");
+                    sendMessage.sendMessage(com.smartapi.Constants.IMP_LOG+"Manual trade not allowed now, closing pos");
                     return true;
                 }
 
@@ -933,11 +960,11 @@ public class StopAtMaxLossScheduler {
 
                 if (LocalTime.now().isBefore(LocalTime.of(15, 30))) {
                     if (slHitRequired) {
-                        String slHitReq = String.format("Sl hit required for 2x sl. symbol %s, sl price %s. Will close all pos, check manually also", sellOptionSymbol, slPrice);
+                        String slHitReq = String.format(com.smartapi.Constants.IMP_LOG+"Sl hit required for 2x sl. symbol %s, sl price %s. Will close all pos, check manually also", sellOptionSymbol, slPrice);
                         log.info(slHitReq);
                         sendMail(slHitReq);
                     } else if (exitReqOnBasisOfOi) {
-                        String slHitReq = String.format("EXIT required because reverse oi crossover. symbol %s. Will close all pos, check manually also", sellOptionSymbol);
+                        String slHitReq = String.format(com.smartapi.Constants.IMP_LOG+"EXIT required because reverse oi crossover. symbol %s. Will close all pos, check manually also", sellOptionSymbol);
                         log.info(slHitReq);
                         sendMail(slHitReq);
 
@@ -1004,7 +1031,7 @@ public class StopAtMaxLossScheduler {
             log.error("Error in placing order for {}", tradeSymbol, e);
         }
         if (order == null) {
-            log.info("Buy order failed to processed, retrying");
+            log.info("Buy order failed processed, retrying");
             init();
             try {
                 Thread.sleep(200);
@@ -1061,7 +1088,7 @@ public class StopAtMaxLossScheduler {
             log.error("Error in placing order for {}", tradeSymbol, e);
         }
         if (order == null) {
-            log.info("Buy order failed to processed, retrying");
+            log.info("Buy order failed processed, retrying");
             init();
             try {
                 Thread.sleep(200);

@@ -71,6 +71,7 @@ public class OITrackScheduler {
 
     private String BSE_NFO = "BFO";
     private String NSE_NFO = "NFO";
+
     @Scheduled(cron = "0 50 8 * * ?")
     public void reInitEmail() {
         int success = 0;
@@ -93,10 +94,10 @@ public class OITrackScheduler {
             content.append("Oi Based trade placed: " + configs.getOiBasedTradePlaced() + "\n");
 
             sendMessage.sendMessage(content.toString());
-            log.info("Data loaded of symbols");
+            log.info(com.smartapi.Constants.IMP_LOG+"Data loaded of symbols");
         } else {
             sendMessage.sendMessage("Failed data loaded for symbols");
-            log.error("Failed data loaded of symbols");
+            log.error(com.smartapi.Constants.IMP_LOG+"Failed data loaded of symbols");
         }
     }
 
@@ -110,12 +111,12 @@ public class OITrackScheduler {
         configs.setSensxSymbolData(new HashMap<>());
         configs.setSymbolToStrikeMap(new HashMap<>());
 
-        log.info("Initializing rest template");
+        log.info(com.smartapi.Constants.IMP_LOG+"Initializing rest template");
         restTemplate = new RestTemplateBuilder().setConnectTimeout(Duration.ofSeconds(10))
                 .setReadTimeout(Duration.ofSeconds(10))
                 .build();
-        log.info("Rest template initialized");
-        log.info("Fetching symbols");
+        log.info(com.smartapi.Constants.IMP_LOG+"Rest template initialized");
+        log.info(com.smartapi.Constants.IMP_LOG+"Fetching symbols");
         HttpEntity<String> httpEntity = new HttpEntity<String>("ip");
         ResponseEntity<String> response;
         try {
@@ -126,10 +127,10 @@ public class OITrackScheduler {
         } catch (Exception e) {
             response = restTemplate.exchange("https://margincalculator.angelbroking.com/OpenAPI_File/files/OpenAPIScripMaster.json",
                     HttpMethod.GET, httpEntity, String.class);
-            log.error("Failed fetching symbols, retrying");
+            log.error(com.smartapi.Constants.IMP_LOG+"Failed fetching symbols, retrying");
             success = 0;
         }
-        log.info("Fetched symbols");
+        log.info(com.smartapi.Constants.IMP_LOG+"Fetched symbols");
         int startIndex = response.toString().indexOf("[");
         int endINdex = response.toString().indexOf(",[Server");
         int cnt = 0;
@@ -188,11 +189,11 @@ public class OITrackScheduler {
             });*/
 
             symbolDataList.add(SymbolData.builder().expiryString("03NOV2023").symbol("smbl").strike(1500).name("symb").token("tkn").build());
-            log.info("Processed {} symbols. Oi change percent {}. Matched Expiries {}, Non match expiries {} for today", symbolDataList.size(), configs.getOiPercent(),
+            log.info(com.smartapi.Constants.IMP_LOG+"Processed {} symbols. Oi change percent {}. Matched Expiries {}, Non match expiries {} for today", symbolDataList.size(), configs.getOiPercent(),
                     matchedExpiries, jsonArray.length() - matchedExpiries);
             jsonArray = null;
         } catch (Exception e) {
-            log.error("Error in processing symbols at count {}, {}", cnt, e.getMessage());
+            log.error(com.smartapi.Constants.IMP_LOG+"Error in processing symbols at count {}, {}", cnt, e.getMessage());
         }
         if (success == 1) {
             configs.setSymbolDataList(symbolDataList);
@@ -254,9 +255,9 @@ public class OITrackScheduler {
         similarly for 19650 strike.
          */
         if (configs.getSymbolDataList() == null || configs.getSymbolDataList().isEmpty()) {
-            log.info("Loading symbols");
+            log.info(com.smartapi.Constants.IMP_LOG+"Loading symbols");
             init();
-            log.info("Loaded symbols");
+            log.info(com.smartapi.Constants.IMP_LOG+"Loaded symbols");
         }
 
         String today = LocalDate.now().format(DateTimeFormatter.ofPattern("ddMMMyyyy"));
@@ -280,7 +281,7 @@ public class OITrackScheduler {
         // Any change made to from and to time here, should also be made in stop loss scheduler
         // Time now is not allowed.
         LocalTime localStartTimeMarket = LocalTime.of(11, 50, 0);
-        LocalTime localEndTime = LocalTime.of(20, 10, 1);
+        LocalTime localEndTime = LocalTime.of(20, 20, 1);
         LocalTime now1 = LocalTime.now();
 
         LocalDate expiryDateNifty = getExpiryDate(DayOfWeek.THURSDAY); // use wednesday if holiday on exp
@@ -323,7 +324,7 @@ public class OITrackScheduler {
         int oi;
         int niftyDiff = 500; // index value diff
         int finniftyDiff = 500;
-        int midcapDiff = 600;
+        int midcapDiff = 500;
         int bankNiftyDiff = 800;
         int senSxDiff = 1000;
         StringBuilder email = new StringBuilder();
@@ -361,7 +362,7 @@ public class OITrackScheduler {
                             email.append(response);
                             email.append("\n\n");
                         } else if ((Math.abs(changePercent) >= configs.getOiPercent())) {
-                            log.info("{} has change % above oi percent. percent {}\n", symbolData.getSymbol(), changePercent);
+                            log.info(com.smartapi.Constants.IMP_LOG+"{} has change % above oi percent. percent {}\n", symbolData.getSymbol(), changePercent);
                         }
                         oiMap.put(symbolData.getSymbol(), oi);
                         //log.info("OI Data | {}", response);
@@ -400,7 +401,7 @@ public class OITrackScheduler {
                             email.append(response);
                             email.append("\n\n");
                         } else if ((Math.abs(changePercent) >= configs.getOiPercent())) {
-                            log.info("{} has change % above oi percent. Percent {}\n", symbolData.getSymbol(), changePercent);
+                            log.info(com.smartapi.Constants.IMP_LOG+"{} has change % above oi percent. Percent {}\n", symbolData.getSymbol(), changePercent);
                         }
                         oiMap.put(symbolData.getSymbol(), oi);
                         //log.info("OI Data | {}", response);
@@ -442,7 +443,7 @@ public class OITrackScheduler {
                             email.append(response);
                             email.append("\n\n");
                         } else if ((Math.abs(changePercent) >= configs.getOiPercent())) {
-                            log.info("{} has change % above oi percent. percent {}\n", symbolData.getSymbol(), changePercent);
+                            log.info(com.smartapi.Constants.IMP_LOG+"{} has change % above oi percent. percent {}\n", symbolData.getSymbol(), changePercent);
                         }
                         oiMap.put(symbolData.getSymbol(), oi);
                         //log.info("OI Data | {}", response);
@@ -481,7 +482,7 @@ public class OITrackScheduler {
                             email.append(response);
                             email.append("\n\n");
                         } else if ((Math.abs(changePercent) >= configs.getOiPercent())) {
-                            log.info("{} has change % above oi percent. percent {}\n", symbolData.getSymbol(), changePercent);
+                            log.info(com.smartapi.Constants.IMP_LOG+"{} has change % above oi percent. percent {}\n", symbolData.getSymbol(), changePercent);
                         }
                         oiMap.put(symbolData.getSymbol(), oi);
                         //log.info("OI Data | {}", response);
@@ -525,7 +526,7 @@ public class OITrackScheduler {
                             email.append(response);
                             email.append("\n\n");
                         } else if ((Math.abs(changePercent) >= configs.getOiPercent())) {
-                            log.info("{} has change % above oi percent. percent {}\n", symbolData.getSymbol(), changePercent);
+                            log.info(com.smartapi.Constants.IMP_LOG+"{} has change % above oi percent. percent {}\n", symbolData.getSymbol(), changePercent);
                         }
                         oiMap.put(symbolData.getSymbol(), oi);
                         //log.info("OI Data | {}", response);
@@ -538,7 +539,7 @@ public class OITrackScheduler {
                     }
                 }
             } catch (Exception e) {
-                log.error("Error in fetching oi of symbol {}", symbolData.getSymbol(), e);
+                log.error(com.smartapi.Constants.IMP_LOG+"Error in fetching oi of symbol {}", symbolData.getSymbol(), e);
             }
         }
         /*log.info("Oi Map:");
@@ -576,7 +577,7 @@ public class OITrackScheduler {
                                 bigeligible = true;
                             }
                             if (bigeligible) {
-                                log.info("Big eligible found true for symbol {}\n", symbol);
+                                log.info(com.smartapi.Constants.IMP_LOG+"Big eligible found true for symbol {}\n", symbol);
                             }
                             if (eligible || bigeligible) {
                                 if (diffPercent >= finalDiff) {
@@ -588,7 +589,7 @@ public class OITrackScheduler {
                                     // configs.setOiBasedTradePlaced(true); Add code to sell option
 
                                     // reset
-                                    log.info("Reset oi enabled to false after trade placed for ce/pe of {}\n", tradeSymbol);
+                                    log.info(com.smartapi.Constants.IMP_LOG+"Reset oi enabled to false after trade placed for ce/pe of {}\n", tradeSymbol);
                                     configs.getOiTradeMap().put(symbol, OiTrade.builder().ceOi(newCeOi)
                                             .peOi(newPeOi).eligible(false).build());
 
@@ -667,12 +668,14 @@ public class OITrackScheduler {
                                     }
                                 }
                                 if (newCeOi > 0 && newPeOi > 0 && diffPercent < finalDiff) {
-                                    if (eligible==true) {
+                                    if (eligible) {
                                         eligible=true;
                                     } else if (diffPercent <= diffInitial) {
                                         eligible = true;
                                     }
-                                    log.info("Oi updated for {} with enabled {}\n", symbol, eligible);
+                                    if (eligible) {
+                                        log.info(com.smartapi.Constants.IMP_LOG+"Oi updated for {} with enabled {}\n", symbol, eligible);
+                                    }
                                     configs.getOiTradeMap().put(symbol, OiTrade.builder().ceOi(newCeOi)
                                             .peOi(newPeOi).eligible(eligible).build());
                                 }
@@ -702,14 +705,14 @@ public class OITrackScheduler {
                             if (diffPercent <= diffInitial) {
                                 eligible = true;
                             }
-                            log.info("Symbol: {} stored with initial CE OI: {}, PE OI: {}\n", symbol, ceOi, peOi);
+                            log.info(com.smartapi.Constants.IMP_LOG+"Symbol: {} stored with initial CE OI: {}, PE OI: {}\n", symbol, ceOi, peOi);
                             configs.getOiTradeMap().put(symbol, OiTrade.builder().ceOi(ceOi)
                                     .peOi(peOi).eligible(eligible).build());
                         }
                     }
                 }
             } catch (Exception e) {
-                log.error("Error occurred in processing strike: {}\n", entry.getKey(), e);
+                log.error(com.smartapi.Constants.IMP_LOG+"Error occurred in processing strike: {}\n", entry.getKey(), e);
             }
         }
 
@@ -848,7 +851,7 @@ public class OITrackScheduler {
             } else if (index.startsWith(SENSEX)) {
                 indexPrice = sensxLtp;
             }
-            log.info("Index used: {}. Index price: {}", index, indexPrice);
+            log.info(com.smartapi.Constants.IMP_LOG+"Index used: {}. Index price: {}", index, indexPrice);
 
             symbol2 = "";
             symbol1 = "";
@@ -895,12 +898,12 @@ public class OITrackScheduler {
                 symbol = symbol1;
             }
 
-            log.info("Symbols. S1: {}, S2: {}, diff1: {}, diff2: {}", symbol1, symbol2, diff1, diff2);
+            log.info(com.smartapi.Constants.IMP_LOG+"Symbols. S1: {}, S2: {}, diff1: {}, diff2: {}", symbol1, symbol2, diff1, diff2);
 
             if (!symbol.isEmpty() && !symbol.contains(SENSEX)) {
                 String sellSymbol = configs.getOiTradeMap().get(symbol).getCeOi() > configs.getOiTradeMap().get(symbol).getPeOi()
                         ? symbol : symbol.replace("CE", "PE");
-                String op = String.format("Max oi based trade is being initiated for symbol %s. Oi diff: %d", sellSymbol, Math.max(diff2, diff1));
+                String op = String.format(com.smartapi.Constants.IMP_LOG+"Max oi based trade is being initiated for symbol %s. Oi diff: %d", sellSymbol, Math.max(diff2, diff1));
                 log.info(op);
                 sendMessage.sendMessage(op);
                 
@@ -1024,11 +1027,11 @@ public class OITrackScheduler {
         if (isAnotherTradeAllowed) {
             try {
                 stopAtMaxLossScheduler.stopOnMaxLossProcess(true);
-                log.info("Closed old pos for new re trade");
+                log.info(com.smartapi.Constants.IMP_LOG+"Closed old pos for new re trade");
                 sendMessage.sendMessage("Closed old pos for new re trade");
 
             } catch (Exception e) {
-                log.error("Error closing all pos for retrade ", e);
+                log.error(com.smartapi.Constants.IMP_LOG+"Error closing all pos for retrade ", e);
                 sendMessage.sendMessage("Error closing all pos for retrade");
             }
         }
@@ -1064,7 +1067,7 @@ public class OITrackScheduler {
             Double price = 0.0;
 
             SymbolData sellSymbolData = fetchSellSymbol(tradeSymbol);
-            opt = "Oi based trade enabled. Initiating trade for " + sellSymbolData.getSymbol();
+            opt = com.smartapi.Constants.IMP_LOG+"Oi based trade enabled. Initiating trade for " + sellSymbolData.getSymbol();
             log.info(opt);
             sendMessage.sendMessage(opt);
             int strikeDiff;
@@ -1116,12 +1119,12 @@ public class OITrackScheduler {
             } else {
                 lotSize = configs.getFinniftyLotSize();
             }
-            log.info("Max Qty {}. Index {}. Tradable Qty {}, LotSize {}\n", maxQty, indexName, qty, lotSize);
+            log.info(com.smartapi.Constants.IMP_LOG+"Max Qty {}. Index {}. Tradable Qty {}, LotSize {}\n", maxQty, indexName, qty, lotSize);
 
             int fullBatches = qty / maxQty;
             int remainingQty = qty % maxQty;
             remainingQty = (remainingQty % (int) lotSize == 0) ? remainingQty : remainingQty - (remainingQty % (int) lotSize);
-            log.info("Trade Details: strikediff {}, price1 {}%, price2 {}%, price3 {}%, total qty {}\n", strikeDiff, p1, p2, p3, qty);
+            log.info(com.smartapi.Constants.IMP_LOG+"Trade Details: strikediff {}, price1 {}%, price2 {}%, price3 {}%, total qty {}\n", strikeDiff, p1, p2, p3, qty);
             SymbolData buySymbolData;
 
             String optionType = tradeSymbol.endsWith("CE") ? "CE" : "PE";
@@ -1139,11 +1142,11 @@ public class OITrackScheduler {
             for (i = 0; i < fullBatches; i++) {
                 Order order = stopAtMaxLossScheduler.placeOrder(buySymbolData.getSymbol(), buySymbolData.getToken(), buyLtp, maxQty, Constants.TRANSACTION_TYPE_BUY, 0.0);
                 if (order != null) {
-                    opt = String.format("Buy order placed for %s, qty %d", buySymbolData.getSymbol(), maxQty);
+                    opt = String.format(com.smartapi.Constants.IMP_LOG+"Buy order placed for %s, qty %d", buySymbolData.getSymbol(), maxQty);
                     log.info(opt);
                     sendMessage.sendMessage(opt);
                 } else {
-                    opt = String.format("Buy order failed for %s, qty %d", buySymbolData.getSymbol(), maxQty);
+                    opt = String.format(com.smartapi.Constants.IMP_LOG+"Buy order failed for %s, qty %d", buySymbolData.getSymbol(), maxQty);
                     log.info(opt);
                     sendMessage.sendMessage(opt);
                 }
@@ -1151,11 +1154,11 @@ public class OITrackScheduler {
             if (remainingQty > 0) {
                 Order order = stopAtMaxLossScheduler.placeOrder(buySymbolData.getSymbol(), buySymbolData.getToken(), buyLtp, remainingQty, Constants.TRANSACTION_TYPE_BUY, 0.0);
                 if (order != null) {
-                    opt = String.format("Buy order placed for %s, qty %d", buySymbolData.getSymbol(), remainingQty);
+                    opt = String.format(com.smartapi.Constants.IMP_LOG+"Buy order placed for %s, qty %d", buySymbolData.getSymbol(), remainingQty);
                     log.info(opt);
                     sendMessage.sendMessage(opt);
                 } else {
-                    opt = String.format("Buy order failed for %s, qty %d", buySymbolData.getSymbol(), remainingQty);
+                    opt = String.format(com.smartapi.Constants.IMP_LOG+"Buy order failed for %s, qty %d", buySymbolData.getSymbol(), remainingQty);
                     log.info(opt);
                     sendMessage.sendMessage(opt);
                 }
@@ -1180,24 +1183,24 @@ public class OITrackScheduler {
 
             intq4 = qty - intq1 - intq2 - intq3;
             if (intq1>qty) {
-                log.info("Adjusting Q1");
+                log.info(com.smartapi.Constants.IMP_LOG+"Adjusting Q1");
                 intq1 = qty;
                 intq2 = 0;
                 intq3 = 0;
                 intq4 = 0;
             } else if (intq1+intq2>qty) {
-                log.info("Adjusting Qty2");
+                log.info(com.smartapi.Constants.IMP_LOG+"Adjusting Qty2");
                 intq2 = qty - intq1;
 
                 intq3 = 0;
                 intq4 = 0;
             } else if (intq1+intq2+intq3>qty) {
-                log.info("Adjusting Qty3");
+                log.info(com.smartapi.Constants.IMP_LOG+"Adjusting Qty3");
                 intq3 = qty - intq1 - intq2;
 
                 intq4 = 0;
             } else if (intq1+intq2+intq3+intq4>qty) {
-                log.info("Adjusting Qty4");
+                log.info(com.smartapi.Constants.IMP_LOG+"Adjusting Qty4");
                 intq4 = qty - intq1 - intq2 - intq3;
             }
             List<Integer> qtys1 = getQtyList(intq1, maxQty, lotSize);
@@ -1205,7 +1208,7 @@ public class OITrackScheduler {
             List<Integer> qtys3 = getQtyList(intq3, maxQty, lotSize);
             List<Integer> qtys4 = getQtyList(intq4, maxQty, lotSize);
 
-            log.info("Trade Details: Q1 {}, Q2 {}, Q3 {}, Q4 {} p1 {}, p2 {}, p3 {}, p4 {}\n",
+            log.info(com.smartapi.Constants.IMP_LOG+"Trade Details: Q1 {}, Q2 {}, Q3 {}, Q4 {} p1 {}, p2 {}, p3 {}, p4 {}\n",
                     intq1, intq2, intq3, intq4, sellLtp, trg1, trg2, trg3);
 
             Order sellOrder;
@@ -1213,11 +1216,11 @@ public class OITrackScheduler {
             for (Integer qt : qtys1) {
                 sellOrder = stopAtMaxLossScheduler.placeOrder(sellSymbolData.getSymbol(), sellSymbolData.getToken(), sellLtp, qt, Constants.TRANSACTION_TYPE_SELL, 0.0);
                 if (sellOrder != null) {
-                    opt = String.format("Sell order placed for %s, qty %d, Price %f", sellSymbolData.getSymbol(), qt, sellLtp);
+                    opt = String.format(com.smartapi.Constants.IMP_LOG+"Sell order placed for %s, qty %d, Price %f", sellSymbolData.getSymbol(), qt, sellLtp);
                     log.info(opt);
                     sendMessage.sendMessage(opt);
                 } else {
-                    opt = String.format("Sell order failed for %s, qty %d Price %f", sellSymbolData.getSymbol(), qt, sellLtp);
+                    opt = String.format(com.smartapi.Constants.IMP_LOG+"Sell order failed for %s, qty %d Price %f", sellSymbolData.getSymbol(), qt, sellLtp);
                     log.info(opt);
                     sendMessage.sendMessage(opt);
                 }
@@ -1226,11 +1229,11 @@ public class OITrackScheduler {
             for (Integer qt : qtys2) {
                 sellOrder = stopAtMaxLossScheduler.placeOrder(sellSymbolData.getSymbol(), sellSymbolData.getToken(), sellLtp, qt, Constants.TRANSACTION_TYPE_SELL, trg1);
                 if (sellOrder != null) {
-                    opt = String.format("Sell order placed for %s, qty %d. Trigger price %f", sellSymbolData.getSymbol(), qt, trg1);
+                    opt = String.format(com.smartapi.Constants.IMP_LOG+"Sell order placed for %s, qty %d. Trigger price %f", sellSymbolData.getSymbol(), qt, trg1);
                     log.info(opt);
                     sendMessage.sendMessage(opt);
                 } else {
-                    opt = String.format("Sell order failed for %s, qty %d. Trigger price %f", sellSymbolData.getSymbol(), qt, trg1);
+                    opt = String.format(com.smartapi.Constants.IMP_LOG+"Sell order failed for %s, qty %d. Trigger price %f", sellSymbolData.getSymbol(), qt, trg1);
                     log.info(opt);
                     sendMessage.sendMessage(opt);
                 }
@@ -1239,11 +1242,11 @@ public class OITrackScheduler {
             for (Integer qt : qtys3) {
                 sellOrder = stopAtMaxLossScheduler.placeOrder(sellSymbolData.getSymbol(), sellSymbolData.getToken(), sellLtp, qt, Constants.TRANSACTION_TYPE_SELL, trg2);
                 if (sellOrder != null) {
-                    opt = String.format("Sell order placed for %s, qty %d. Trigger price %f", sellSymbolData.getSymbol(), qt, trg2);
+                    opt = String.format(com.smartapi.Constants.IMP_LOG+"Sell order placed for %s, qty %d. Trigger price %f", sellSymbolData.getSymbol(), qt, trg2);
                     log.info(opt);
                     sendMessage.sendMessage(opt);
                 } else {
-                    opt = String.format("Sell order failed for %s, qty %d. Trigger price %f", sellSymbolData.getSymbol(), qt, trg2);
+                    opt = String.format(com.smartapi.Constants.IMP_LOG+"Sell order failed for %s, qty %d. Trigger price %f", sellSymbolData.getSymbol(), qt, trg2);
                     log.info(opt);
                     sendMessage.sendMessage(opt);
                 }
@@ -1252,11 +1255,11 @@ public class OITrackScheduler {
             for (Integer qt : qtys4) {
                 sellOrder = stopAtMaxLossScheduler.placeOrder(sellSymbolData.getSymbol(), sellSymbolData.getToken(), sellLtp, qt, Constants.TRANSACTION_TYPE_SELL, trg3);
                 if (sellOrder != null) {
-                    opt = String.format("Sell order placed for %s, qty %d. Trigger price %f", sellSymbolData.getSymbol(), qt, trg3);
+                    opt = String.format(com.smartapi.Constants.IMP_LOG+"Sell order placed for %s, qty %d. Trigger price %f", sellSymbolData.getSymbol(), qt, trg3);
                     log.info(opt);
                     sendMessage.sendMessage(opt);
                 } else {
-                    opt = String.format("Sell order failed for %s, qty %d. Trigger price %f", sellSymbolData.getSymbol(), qt, trg3);
+                    opt = String.format(com.smartapi.Constants.IMP_LOG+"Sell order failed for %s, qty %d. Trigger price %f", sellSymbolData.getSymbol(), qt, trg3);
                     log.info(opt);
                     sendMessage.sendMessage(opt);
                 }
@@ -1264,7 +1267,7 @@ public class OITrackScheduler {
 
             configs.setOiBasedTradePlaced(true);
         } else {
-            log.info("Trade found but oi based trade not enabled or trade already placed. Check if manual trade required. Sell {}\n", tradeSymbol);
+            log.info(com.smartapi.Constants.IMP_LOG+"Trade found but oi based trade not enabled or trade already placed. Check if manual trade required. Sell {}\n", tradeSymbol);
             sendMessage.sendMessage("Trade found but oi based trade not enabled or trade already placed. Check if manual trade required. Sell " + tradeSymbol);
             sendMessage.sendMessage("Sell symbol " + fetchSellSymbol(tradeSymbol));
         }
@@ -1295,7 +1298,7 @@ public class OITrackScheduler {
         int partialQty = qty%maxQty;
         List<Integer> qtys = new ArrayList<>();
         if (qty<0) {
-            log.info("Negative qty, use 0 qty");
+            log.info(com.smartapi.Constants.IMP_LOG+"Negative qty, use 0 qty");
             qtys.add(0);
             return qtys;
         }
@@ -1308,7 +1311,7 @@ public class OITrackScheduler {
             part = part * (int) lotSize;
             qtys.add(part);
         }
-        log.info("Qty list for qty {}: {}", qty, qtys);
+        log.info(com.smartapi.Constants.IMP_LOG+"Qty list for qty {}: {}", qty, qtys);
         return qtys;
     }
 
@@ -1376,7 +1379,7 @@ public class OITrackScheduler {
                 symbolData = configs.getSymbolMap().get(indexName+"_"+ strike +"_"+optionType);
             }
         } catch (InterruptedException e) {
-            log.error("Error fetching sell symbol");
+            log.error(com.smartapi.Constants.IMP_LOG+"Error fetching sell symbol");
         }
         return null;
     }
@@ -1405,7 +1408,7 @@ public class OITrackScheduler {
             Double price = 0.0;
 
             SymbolData sellSymbolData = fetchSellSymbol(tradeSymbol);
-            opt = "Oi based trade enabled. Initiating trade for " + sellSymbolData.getSymbol();
+            opt = com.smartapi.Constants.IMP_LOG+"Oi based trade enabled. Initiating trade for " + sellSymbolData.getSymbol();
             log.info(opt);
             sendMessage.sendMessage(opt);
             int strikeDiff;
@@ -1457,12 +1460,12 @@ public class OITrackScheduler {
             } else {
                 lotSize = configs.getFinniftyLotSize();
             }
-            log.info("Max Qty {}. Index {}. Tradable Qty {}, LotSize {}", maxQty, indexName, qty, lotSize);
+            log.info(com.smartapi.Constants.IMP_LOG+"Max Qty {}. Index {}. Tradable Qty {}, LotSize {}", maxQty, indexName, qty, lotSize);
 
             int fullBatches = qty / maxQty;
             int remainingQty = qty % maxQty;
             remainingQty = (remainingQty % (int) lotSize == 0) ? remainingQty : remainingQty - (remainingQty % (int) lotSize);
-            log.info("Trade Details: strikediff {}, price1 {}%, price2 {}%, total qty {}", strikeDiff, p1, p2, qty);
+            log.info(com.smartapi.Constants.IMP_LOG+"Trade Details: strikediff {}, price1 {}%, price2 {}%, total qty {}", strikeDiff, p1, p2, qty);
             SymbolData buySymbolData;
 
             String optionType = tradeSymbol.endsWith("CE") ? "CE" : "PE";
@@ -1480,11 +1483,11 @@ public class OITrackScheduler {
             for (i = 0; i < fullBatches; i++) {
                 Order order = stopAtMaxLossScheduler.placeOrder(buySymbolData.getSymbol(), buySymbolData.getToken(), buyLtp, maxQty, Constants.TRANSACTION_TYPE_BUY, 0.0);
                 if (order != null) {
-                    opt = String.format("Buy order placed for %s, qty %d", buySymbolData.getSymbol(), maxQty);
+                    opt = String.format(com.smartapi.Constants.IMP_LOG+"Buy order placed for %s, qty %d", buySymbolData.getSymbol(), maxQty);
                     log.info(opt);
                     sendMessage.sendMessage(opt);
                 } else {
-                    opt = String.format("Buy order failed for %s, qty %d", buySymbolData.getSymbol(), maxQty);
+                    opt = String.format(com.smartapi.Constants.IMP_LOG+"Buy order failed for %s, qty %d", buySymbolData.getSymbol(), maxQty);
                     log.info(opt);
                     sendMessage.sendMessage(opt);
                 }
@@ -1492,11 +1495,11 @@ public class OITrackScheduler {
             if (remainingQty > 0) {
                 Order order = stopAtMaxLossScheduler.placeOrder(buySymbolData.getSymbol(), buySymbolData.getToken(), buyLtp, remainingQty, Constants.TRANSACTION_TYPE_BUY, 0.0);
                 if (order != null) {
-                    opt = String.format("Buy order placed for %s, qty %d", buySymbolData.getSymbol(), remainingQty);
+                    opt = String.format(com.smartapi.Constants.IMP_LOG+"Buy order placed for %s, qty %d", buySymbolData.getSymbol(), remainingQty);
                     log.info(opt);
                     sendMessage.sendMessage(opt);
                 } else {
-                    opt = String.format("Buy order failed for %s, qty %d", buySymbolData.getSymbol(), remainingQty);
+                    opt = String.format(com.smartapi.Constants.IMP_LOG+"Buy order failed for %s, qty %d", buySymbolData.getSymbol(), remainingQty);
                     log.info(opt);
                     sendMessage.sendMessage(opt);
                 }
@@ -1507,11 +1510,11 @@ public class OITrackScheduler {
             for (i = 0; i < fullBatches; i++) {
                 sellOrder = stopAtMaxLossScheduler.placeOrder(sellSymbolData.getSymbol(), sellSymbolData.getToken(), sellLtp, maxQty, Constants.TRANSACTION_TYPE_SELL, 0.0);
                 if (sellOrder != null) {
-                    opt = String.format("Sell order placed for %s, qty %d, Price %f", sellSymbolData.getSymbol(), maxQty, sellLtp);
+                    opt = String.format(com.smartapi.Constants.IMP_LOG+"Sell order placed for %s, qty %d, Price %f", sellSymbolData.getSymbol(), maxQty, sellLtp);
                     log.info(opt);
                     sendMessage.sendMessage(opt);
                 } else {
-                    opt = String.format("Sell order failed for %s, qty %d Price %f", sellSymbolData.getSymbol(), maxQty, sellLtp);
+                    opt = String.format(com.smartapi.Constants.IMP_LOG+"Sell order failed for %s, qty %d Price %f", sellSymbolData.getSymbol(), maxQty, sellLtp);
                     log.info(opt);
                     sendMessage.sendMessage(opt);
                 }
@@ -1519,18 +1522,18 @@ public class OITrackScheduler {
             if (remainingQty > 0) {
                 sellOrder = stopAtMaxLossScheduler.placeOrder(sellSymbolData.getSymbol(), sellSymbolData.getToken(), sellLtp, remainingQty, Constants.TRANSACTION_TYPE_SELL, 0.0);
                 if (sellOrder != null) {
-                    opt = String.format("Sell order placed for %s, qty %d, Price %f", sellSymbolData.getSymbol(), remainingQty, sellLtp);
+                    opt = String.format(com.smartapi.Constants.IMP_LOG+"Sell order placed for %s, qty %d, Price %f", sellSymbolData.getSymbol(), remainingQty, sellLtp);
                     log.info(opt);
                     sendMessage.sendMessage(opt);
                 } else {
-                    opt = String.format("Sell order failed for %s, qty %d Price %f", sellSymbolData.getSymbol(), remainingQty, sellLtp);
+                    opt = String.format(com.smartapi.Constants.IMP_LOG+"Sell order failed for %s, qty %d Price %f", sellSymbolData.getSymbol(), remainingQty, sellLtp);
                     log.info(opt);
                     sendMessage.sendMessage(opt);
                 }
             }
             configs.setOiBasedTradePlaced(true);
         } else {
-            log.info("Trade found but oi based trade not enabled or trade already placed. Check if manual trade required. Sell {}", tradeSymbol);
+            log.info(com.smartapi.Constants.IMP_LOG+"Trade found but oi based trade not enabled or trade already placed. Check if manual trade required. Sell {}", tradeSymbol);
             sendMessage.sendMessage("Trade found but oi based trade not enabled or trade already placed. Check if manual trade required. Sell " + tradeSymbol);
             sendMessage.sendMessage("Sell symbol " + fetchSellSymbol(tradeSymbol));
         }

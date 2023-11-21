@@ -4,7 +4,6 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 
 import com.angelbroking.smartapi.models.OrderParams;
-import com.angelbroking.smartapi.utils.Constants;
 import org.json.JSONObject;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.SpringApplication;
@@ -36,7 +35,7 @@ public class SmartApiApplication {
 
 	public static void main(String[] args) throws UnknownHostException {
 		context = SpringApplication.run(SmartApiApplication.class, args);
-		log.info("Started jar at address {}, Build {}", InetAddress.getLocalHost(), "16.11.1");
+		log.info(Constants.IMP_LOG+"Started jar at address {}, Build {}", InetAddress.getLocalHost(), "21.11.1");
 	}
 
 	public static void restart() {

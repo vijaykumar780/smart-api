@@ -1,6 +1,7 @@
 package com.smartapi.service;
 
 import com.smartapi.Configs;
+import com.smartapi.Constants;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -21,15 +22,15 @@ public class TradeAndEmailRefreshScheduler {
 
     @Scheduled(cron = "0 0 9 * * MON-FRI")
     public void refreshPerDayTrade() {
-        log.info("setting TradePlaced false");
+        log.info(Constants.IMP_LOG+"setting TradePlaced false");
         configs.setTradePlaced(false);
-        log.info("TradePlaced is set false");
+        log.info(Constants.IMP_LOG+"TradePlaced is set false");
     }
 
     @Scheduled(fixedDelay = 1640000000)
     public void refreshEmail() throws UnknownHostException {
 
-        sendMessage.sendMessage("App started " + InetAddress.getLocalHost().toString());
-        log.info("Start Email sent");
+        sendMessage.sendMessage("ALGO App started " + InetAddress.getLocalHost().toString());
+        log.info(Constants.IMP_LOG+"Start Email sent");
     }
 }

@@ -1,6 +1,7 @@
 package com.smartapi.controller;
 
 import com.smartapi.Configs;
+import com.smartapi.Constants;
 import com.smartapi.SmartApiApplication;
 import com.smartapi.pojo.OiTrade;
 import com.smartapi.pojo.SystemConfigs;
@@ -68,7 +69,7 @@ public class Controller {
 
     @GetMapping("/servicecheck")
     public String serviceCheck() {
-        log.info("Service is up");
+        log.info(Constants.IMP_LOG+"Service is up");
         return "Service is up";
     }
 
@@ -94,7 +95,7 @@ public class Controller {
         configs.setFinniftyValue(finnifty);
         configs.setMidcapNiftyValue(midcapnifty);
         configs.setOiPercent(oiPercent);
-        log.info("Updated configs nifty {}, finnifty {}, midcapnifty {}, oipercent {}", nifty, finnifty, midcapnifty, oiPercent);
+        log.info(Constants.IMP_LOG+"Updated configs nifty {}, finnifty {}, midcapnifty {}, oipercent {}", nifty, finnifty, midcapnifty, oiPercent);
     }
 
     /*@GetMapping("/updateOiTradePlacedFalse")
@@ -120,7 +121,7 @@ public class Controller {
                 LocalDateTime.now().getDayOfWeek().equals(DayOfWeek.SUNDAY)) {
             return configs.getGmailPassword();
         } else if (now.isAfter(localStartTime) && now.isBefore(localEndTime)) {
-            log.info("Password can not be provided at this time");
+            log.info(Constants.IMP_LOG+"Password can not be provided at this time");
             return "Password can not be provided at this time";
         } else {
             return configs.getGmailPassword();
@@ -129,14 +130,14 @@ public class Controller {
 
     @GetMapping("/sendMail")
     public String sendMail() {
-        log.info("sending Mail");
+        log.info("Constants.IMP_LOG+sending Mail");
         sendMessage.sendMessage("sending Mail");
         return "sending Mail";
     }
 
     @GetMapping("/fetchSymbols")
     public String fetchSymbols() {
-        log.info("Fetch symbols");
+        log.info(Constants.IMP_LOG+"Fetch symbols");
         oiTrackScheduler.init();
         return "Fetched symbols";
     }
@@ -183,7 +184,7 @@ public class Controller {
                     .build();
 
         } catch (Exception e) {
-            log.error("Error in getting config details", e);
+            log.error(Constants.IMP_LOG+"Error in getting config details", e);
         }
         return new ResponseEntity<>(systemConfigs, HttpStatus.ACCEPTED);
     }
@@ -238,7 +239,43 @@ public class Controller {
             log.info("Returned logs");
             return response.toString();
         } catch (Exception e) {
-            log.error("Exception occured", e);
+            log.error(Constants.IMP_LOG+"Exception occured", e);
+            return "";
+        }
+    }
+
+    @GetMapping("/impLogs")
+    public String impLogs() {
+        String homeFolder = environment.getProperty("logging.file.name");
+        log.info("Request to fetch logs of lines. Home folder {}", homeFolder);
+        int max = 0;
+        try {
+            File logFile = new File(homeFolder);
+            BufferedReader br = new BufferedReader(new FileReader(logFile));
+            String line;
+            StringBuilder response = new StringBuilder();
+            int totalLines = 0;
+
+            while ((line = br.readLine()) != null) {
+                totalLines ++;
+            }
+            br.close();
+            br = new BufferedReader(new FileReader(logFile));
+            int startLine = 0;
+            int start = 0;
+            while ((line = br.readLine()) != null) {
+                start ++;
+                if (start >= startLine && max < 5000 && line.contains(Constants.IMP_LOG)) {
+                    response.append(line);
+                    max++;
+                    response.append("\n\n");
+                }
+            }
+            br.close();
+            log.info("Returned logs");
+            return response.toString();
+        } catch (Exception e) {
+            log.error(Constants.IMP_LOG+"Exception occured", e);
             return "";
         }
     }

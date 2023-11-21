@@ -1,6 +1,7 @@
 package com.smartapi.service;
 
 import com.smartapi.Configs;
+import com.smartapi.Constants;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -109,7 +110,7 @@ public class TokenRefresh {
         configs.setMaxOiBasedTradePlaced(false);
         configs.setSymbolToStrikeMap(new HashMap<>());
 
-        log.info("Re inited email count threshold");
+        log.info(Constants.IMP_LOG+"Re inited email count threshold");
     }
 
     @Scheduled(cron = "0 15 16 * * ?")
@@ -120,6 +121,6 @@ public class TokenRefresh {
         configs.setSymbolMap(new HashMap<>());
         configs.setTradedOptions(new ArrayList<>());
         configs.setSensxSymbolData(new HashMap<>());
-        log.info("Cleared memory");
+        log.info(Constants.IMP_LOG+"Cleared memory");
     }
 }

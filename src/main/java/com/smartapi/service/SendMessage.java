@@ -3,6 +3,7 @@ package com.smartapi.service;
 import com.amazonaws.services.sns.AmazonSNSClient;
 import com.amazonaws.services.sns.model.PublishRequest;
 import com.smartapi.Configs;
+import com.smartapi.Constants;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
@@ -45,11 +46,6 @@ public class SendMessage {
 			}
 		}
 
-		if (message != null && configs.isSlHitSmsSent()) {
-			log.info("Skipping message as sms already sent");
-			return;
-		}
-
 		//log.info("Sending message: {}", message);
 		if (sns==1) {
 			snsClient.publish(new PublishRequest("arn:aws:sns:ap-south-1:801536992554:sms", message));
@@ -58,14 +54,14 @@ public class SendMessage {
 			SimpleMailMessage msg = new SimpleMailMessage();
 			msg.setTo("vijaykumarvijay886@gmail.com");
 
-			msg.setSubject("Algo trade");
+			msg.setSubject("[ALGO]");
 			msg.setText(message);
 			msg.setFrom("vijaykumarvijay886@gmail.com");
 			try {
 				javaMailSender.send(msg);
 				log.info("Email sent");
 			} catch (Exception e) {
-				log.error("Error in sending mail ", e);
+				log.error(Constants.IMP_LOG+"Error in sending mail ", e);
 			}
 		}
 

@@ -183,12 +183,12 @@ public class Configs {
 
 	//@Bean("tradingSmartConnect")
 	public SmartConnect TradingSmartConnect() throws Exception, SmartAPIException {
-		log.info("Setting trade placed");
+		log.info(Constants.IMP_LOG+"Setting trade placed");
 		this.tradePlaced = false;
-		log.info("Setting max loss email count");
+		log.info(Constants.IMP_LOG+"Setting max loss email count");
 		this.maxLossEmailCount = 50;
 
-		log.info("Creating TradingSmartConnect");
+		log.info(Constants.IMP_LOG+"Creating TradingSmartConnect");
 		SmartConnect smartConnect = new SmartConnect();
 		smartConnect.setApiKey(tradingPrivateKey);
 		User user = smartConnect.generateSession("V122968", password, totp);
@@ -196,20 +196,20 @@ public class Configs {
 
 		if (user.getAccessToken()==null) {
 			Exception e = new Exception("Error in token creation");
-			log.error("Error in token creation", e);
+			log.error(Constants.IMP_LOG+"Error in token creation", e);
 			throw e;
 		}
 		this.tradingSmartConnectRefreshToken = user.getRefreshToken();
 		smartConnect.setAccessToken(user.getAccessToken());
 		smartConnect.setUserId(user.getUserId());
-		log.info("Created TradingSmartConnect. Token {}", user.getAccessToken());
+		log.info(Constants.IMP_LOG+"Created TradingSmartConnect. Token {}", user.getAccessToken());
 		Thread.sleep(800);
 		return smartConnect;
 	}
 
 	//@Bean("historySmartConnect")
 	public SmartConnect historySmartConnect() throws Exception, SmartAPIException {
-		log.info("Creating historySmartConnect. key {}", historyPrivateKey);
+		log.info(Constants.IMP_LOG+"Creating historySmartConnect. key {}", historyPrivateKey);
 		SmartConnect smartConnect = new SmartConnect();
 		smartConnect.setApiKey(historyPrivateKey);
 		User user = smartConnect.generateSession("V122968", password, totp);
@@ -217,20 +217,20 @@ public class Configs {
 
 		if (user.getAccessToken()==null) {
 			Exception e = new Exception("Error in token creation");
-			log.error("Error in token creation", e);
+			log.error(Constants.IMP_LOG+"Error in token creation", e);
 			throw e;
 		}
 		this.historySmartConnectRefreshToken = user.getRefreshToken();
 		smartConnect.setAccessToken(user.getAccessToken());
 		smartConnect.setUserId(user.getUserId());
-		log.info("Created historySmartConnect. Token {}", user.getAccessToken());
+		log.info(Constants.IMP_LOG+"Created historySmartConnect. Token {}", user.getAccessToken());
 		Thread.sleep(800);
 		return smartConnect;
 	}
 
 	//@Bean("marketSmartConnect")
 	public SmartConnect MarketSmartConnect() throws Exception, SmartAPIException {
-		log.info("Creating MarketSmartConnect");
+		log.info(Constants.IMP_LOG+"Creating MarketSmartConnect");
 		SmartConnect smartConnect = new SmartConnect();
 		smartConnect.setApiKey(marketPrivateKey);
 		User user = smartConnect.generateSession("V122968", password, totp);
@@ -238,14 +238,14 @@ public class Configs {
 
 		if (user.getAccessToken()==null) {
 			Exception e = new Exception("Error in token creation");
-			log.error("Error in token creation", e);
+			log.error(Constants.IMP_LOG+"Error in token creation", e);
 			throw e;
 		}
 		this.marketSmartConnectRefreshToken = user.getRefreshToken();
 
 		smartConnect.setAccessToken(user.getAccessToken());
 		smartConnect.setUserId(user.getUserId());
-		log.info("Created MarketSmartConnect. Token {}", user.getAccessToken());
+		log.info(Constants.IMP_LOG+"Created MarketSmartConnect. Token {}", user.getAccessToken());
 		Thread.sleep(800);
 		return smartConnect;
 	}

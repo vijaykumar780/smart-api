@@ -63,4 +63,6 @@ public class SystemConfigs {
     private int memoryRemaining;
 
     private boolean isMaxOiBasedTradePlaced;
+
+    private String build;
 }

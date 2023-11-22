@@ -181,6 +181,7 @@ public class Controller {
                     .maxProfit(configs.getMaxProfit())
                     .memoryRemaining(configs.getRemainingMemory())
                     .isMaxOiBasedTradePlaced(configs.isMaxOiBasedTradePlaced())
+                    .build(Constants.build)
                     .build();
 
         } catch (Exception e) {

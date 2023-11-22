@@ -67,6 +67,8 @@ public class OITrackScheduler {
 
     boolean isSensexOiCrossTradeEnabled = false; // after 2.30 pm only
 
+    boolean isNiftyOiCrossTradeEnabled = false;
+
     private String SENSEX = "SENSEX";
 
     private String BSE_NFO = "BFO";
@@ -608,7 +610,7 @@ public class OITrackScheduler {
                                             traded = true;
                                         }
                                     } else if (LocalDate.now().getDayOfWeek().equals(DayOfWeek.THURSDAY)) {
-                                        if (symbol.startsWith("NIFTY")) { // nifty
+                                        if (symbol.startsWith("NIFTY") && isNiftyOiCrossTradeEnabled) { // nifty
                                             log.info(opt);
                                             sendMessage.sendMessage(opt);
                                             placeOrders(tradeSymbol);
@@ -642,7 +644,7 @@ public class OITrackScheduler {
                                             sendMessage.sendMessage(opt);
                                             placeOrders(tradeSymbol);
                                             traded = true;
-                                        } else if (symbol.contains(today) && symbol.startsWith("NIFTY")) { // NIFTY
+                                        } else if (symbol.contains(today) && symbol.startsWith("NIFTY") && isNiftyOiCrossTradeEnabled) { // NIFTY
                                             log.info(opt);
                                             sendMessage.sendMessage(opt);
                                             placeOrders(tradeSymbol);

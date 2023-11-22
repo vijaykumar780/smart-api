@@ -35,7 +35,7 @@ public class SmartApiApplication {
 
 	public static void main(String[] args) throws UnknownHostException {
 		context = SpringApplication.run(SmartApiApplication.class, args);
-		log.info(Constants.IMP_LOG+"Started jar at address {}, Build {}", InetAddress.getLocalHost(), "21.11.1");
+		log.info(Constants.IMP_LOG+"Started jar at address {}, Build {}", InetAddress.getLocalHost(), "22.11.1");
 	}
 
 	public static void restart() {

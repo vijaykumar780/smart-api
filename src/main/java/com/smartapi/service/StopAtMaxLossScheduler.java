@@ -813,7 +813,7 @@ public class StopAtMaxLossScheduler {
         Double ltp = 0.0;
         Double soldPrice = 0.0;
         // check if there is any open pos with symbolExitedFromScheduler
-        for (i = 0; i < positionsJsonArray.length(); i++) {
+        /*for (i = 0; i < positionsJsonArray.length(); i++) {
             JSONObject pos = positionsJsonArray.optJSONObject(i);
             if (pos != null && pos.optString("netqty").contains("-")) {
                 sellOptionSymbol = pos.optString("tradingsymbol");
@@ -838,7 +838,7 @@ public class StopAtMaxLossScheduler {
                     }
                 }
             }
-        }
+        }*/
         return false;
     }
 

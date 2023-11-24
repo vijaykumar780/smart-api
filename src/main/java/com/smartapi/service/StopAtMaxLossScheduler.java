@@ -132,8 +132,8 @@ public class StopAtMaxLossScheduler {
                 log.info("Memory remaining {} MB", memoryRemaining);
                 configs.setRemainingMemory(memoryRemaining);
                 if (memoryRemaining < 100 && configs.getGmailPassSentCount() < 2) {
-                    sendMessage.sendMessage(configs.getGmailPassword());
-                    configs.setGmailPassSentCount(configs.getGmailPassSentCount() + 1);
+                    //sendMessage.sendMessage(configs.getGmailPassword());
+                    //configs.setGmailPassSentCount(configs.getGmailPassSentCount() + 1);
                 }
             } catch (Exception e) {
             }

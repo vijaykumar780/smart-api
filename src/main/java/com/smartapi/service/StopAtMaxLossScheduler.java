@@ -191,7 +191,7 @@ public class StopAtMaxLossScheduler {
             return;
         }
 
-        //log.info(positionsJsonArray.toString());
+
         JSONObject orders = marketSmartConnect.getOrderHistory("v122968");
         if (orders == null) {
             log.info("Re-fetch orders. Count 1");
@@ -208,6 +208,14 @@ public class StopAtMaxLossScheduler {
 
 
         JSONArray ordersJsonArray = orders.optJSONArray("data");
+        try {
+            if (now.getSecond()>=40 && now.getSecond()<=46) {
+                log.info("Positions {}", positionsJsonArray.toString());
+                log.info("Orders {}", ordersJsonArray.toString());
+            }
+        } catch (Exception e) {
+
+        }
         processSlScheduler(ordersJsonArray, positionsJsonArray, exitALLFlag, now, configs.getSymbolExitedFromScheduler());
         //System.gc();
     }
@@ -250,7 +258,7 @@ public class StopAtMaxLossScheduler {
         processStrictSl(mtm, modifiedMaxLoss, ordersJsonArray, positionsJsonArray);
         configs.setMtm(mtm.intValue());
         configs.setMaxProfit((int) (sellamount - buyamount));
-        if (LocalTime.now().getHour()>=18 && LocalTime.now().getHour()<=23) {
+        if (LocalTime.now().getHour()>=20 && LocalTime.now().getHour()<=23) {
             configs.setMtm(0);
             configs.setMaxProfit(0);
         }

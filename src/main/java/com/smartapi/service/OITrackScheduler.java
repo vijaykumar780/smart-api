@@ -166,16 +166,16 @@ public class OITrackScheduler {
                             .strike(((int) Double.parseDouble(ob.optString("strike"))) / 100)
                             .build();
                     cnt++;
-                    if (symbolData.getSymbol()!=null && symbolData.getSymbol().contains("NIFTY")) {
+                    if (symbolData.getSymbol()!=null && symbolData.getSymbol().startsWith("NIFTY")) {
                         isNiftyExpiry = true;
                     }
-                    if (symbolData.getSymbol()!=null && symbolData.getSymbol().contains("FINNIFTY")) {
+                    if (symbolData.getSymbol()!=null && symbolData.getSymbol().startsWith("FINNIFTY")) {
                         isFinNiftyExpiry = true;
                     }
-                    if (symbolData.getSymbol()!=null && symbolData.getSymbol().contains("MIDCPNIFTY")) {
+                    if (symbolData.getSymbol()!=null && symbolData.getSymbol().startsWith("MIDCPNIFTY")) {
                         isMidcapNiftyExpiry = true;
                     }
-                    if (symbolData.getSymbol()!=null && symbolData.getSymbol().contains("BANKNIFTY")) {
+                    if (symbolData.getSymbol()!=null && symbolData.getSymbol().startsWith("BANKNIFTY")) {
                         isBankNiftyExpiry = true;
                     }
                     if (Arrays.asList("NIFTY", "FINNIFTY", "MIDCPNIFTY", "BANKNIFTY", SENSEX).contains(symbolData.getName())

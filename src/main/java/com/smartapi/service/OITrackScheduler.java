@@ -74,6 +74,12 @@ public class OITrackScheduler {
     private String BSE_NFO = "BFO";
     private String NSE_NFO = "NFO";
 
+    private boolean isNiftyExpiry = false;
+    private boolean isBankNiftyExpiry = false;
+    private boolean isFinNiftyExpiry = false;
+    private boolean isMidcapNiftyExpiry = false;
+    private boolean isSensexExpiry = false;
+
     @Scheduled(cron = "0 50 8 * * ?")
     public void reInitEmail() {
         int success = 0;
@@ -160,7 +166,18 @@ public class OITrackScheduler {
                             .strike(((int) Double.parseDouble(ob.optString("strike"))) / 100)
                             .build();
                     cnt++;
-
+                    if (symbolData.getSymbol()!=null && symbolData.getSymbol().contains("NIFTY")) {
+                        isNiftyExpiry = true;
+                    }
+                    if (symbolData.getSymbol()!=null && symbolData.getSymbol().contains("FINNIFTY")) {
+                        isFinNiftyExpiry = true;
+                    }
+                    if (symbolData.getSymbol()!=null && symbolData.getSymbol().contains("MIDCPNIFTY")) {
+                        isMidcapNiftyExpiry = true;
+                    }
+                    if (symbolData.getSymbol()!=null && symbolData.getSymbol().contains("BANKNIFTY")) {
+                        isBankNiftyExpiry = true;
+                    }
                     if (Arrays.asList("NIFTY", "FINNIFTY", "MIDCPNIFTY", "BANKNIFTY", SENSEX).contains(symbolData.getName())
                             && ("NFO".equals(ob.optString("exch_seg")) || BSE_NFO.equals(ob.optString("exch_seg")))) {
                         symbolDataList.add(symbolData);
@@ -193,6 +210,8 @@ public class OITrackScheduler {
             symbolDataList.add(SymbolData.builder().expiryString("03NOV2023").symbol("smbl").strike(1500).name("symb").token("tkn").build());
             log.info(com.smartapi.Constants.IMP_LOG+"Processed {} symbols. Oi change percent {}. Matched Expiries {}, Non match expiries {} for today", symbolDataList.size(), configs.getOiPercent(),
                     matchedExpiries, jsonArray.length() - matchedExpiries);
+            log.info(com.smartapi.Constants.IMP_LOG+"Expiry today Nifty {}, Finnifty {}, midcap {}, bankNifty {}", isNiftyExpiry,
+                    isFinNiftyExpiry, isMidcapNiftyExpiry, isBankNiftyExpiry);
             jsonArray = null;
         } catch (Exception e) {
             log.error(com.smartapi.Constants.IMP_LOG+"Error in processing symbols at count {}, {}", cnt, e.getMessage());
@@ -594,7 +613,10 @@ public class OITrackScheduler {
                                     log.info(com.smartapi.Constants.IMP_LOG+"Reset oi enabled to false after trade placed for ce/pe of {}\n", tradeSymbol);
                                     configs.getOiTradeMap().put(symbol, OiTrade.builder().ceOi(newCeOi)
                                             .peOi(newPeOi).eligible(false).build());
-
+                                    LocalTime bankNiftyCutoffTime = LocalTime.of(11, 30);
+                                    if (isNiftyExpiry && isBankNiftyExpiry) {
+                                        bankNiftyCutoffTime = LocalTime.of(13, 30);
+                                    }
                                     if (LocalDate.now().getDayOfWeek().equals(DayOfWeek.TUESDAY)) {
                                         // finnifty only
                                         if (symbol.contains("FINNIFTY")) {
@@ -603,7 +625,7 @@ public class OITrackScheduler {
 
                                             placeOrders(tradeSymbol);
                                             traded = true;
-                                        } else if (symbol.contains(today) && symbol.startsWith("BANKNIFTY")) { // BANKNIFTY
+                                        } else if (symbol.contains(today) && symbol.startsWith("BANKNIFTY") && LocalTime.now().isAfter(bankNiftyCutoffTime)) { // BANKNIFTY
                                             log.info(opt);
                                             sendMessage.sendMessage(opt);
                                             placeOrders(tradeSymbol);
@@ -616,7 +638,7 @@ public class OITrackScheduler {
                                             sendMessage.sendMessage(opt);
                                             placeOrders(tradeSymbol);
                                             traded = true;
-                                        } else if (symbol.contains(today) && symbol.startsWith("BANKNIFTY")) { // BANKNIFTY
+                                        } else if (symbol.contains(today) && symbol.startsWith("BANKNIFTY") && LocalTime.now().isAfter(bankNiftyCutoffTime)) { // BANKNIFTY
                                             log.info(opt);
                                             sendMessage.sendMessage(opt);
                                             placeOrders(tradeSymbol);
@@ -640,7 +662,7 @@ public class OITrackScheduler {
                                         }
                                     } else if (LocalDate.now().getDayOfWeek().equals(DayOfWeek.WEDNESDAY)) {
                                         // check banknifty first and then nifty
-                                        if (symbol.contains(today) && symbol.startsWith("BANKNIFTY")) { // BANKNIFTY
+                                        if (symbol.contains(today) && symbol.startsWith("BANKNIFTY") && LocalTime.now().isAfter(bankNiftyCutoffTime)) { // BANKNIFTY
                                             log.info(opt);
                                             sendMessage.sendMessage(opt);
                                             placeOrders(tradeSymbol);
@@ -811,8 +833,16 @@ public class OITrackScheduler {
         int maxOi2 = 0;
         String symbol1 = "";
         String symbol2 = "";
-        if ((LocalDate.now().getDayOfWeek().equals(DayOfWeek.THURSDAY) && now.isAfter(LocalTime.of(14, 52))) ||
-                (!LocalDate.now().getDayOfWeek().equals(DayOfWeek.THURSDAY) && now.isAfter(LocalTime.of(14, 28)))) {
+        LocalTime cutoffTime = LocalTime.of(14, 28);
+        if (isNiftyExpiry && isBankNiftyExpiry) {
+            cutoffTime = LocalTime.of(14, 52);
+        } else if (isNiftyExpiry) {
+            cutoffTime = LocalTime.of(14, 52);
+        } else if (isMidcapNiftyExpiry) {
+            cutoffTime = LocalTime.of(14, 46);
+        }
+
+        if (now.isAfter(cutoffTime)) {
             for (Map.Entry<String, OiTrade> entry : configs.getOiTradeMap().entrySet()) {
                 String senSxToday = "";
                 if (entry.getKey().startsWith(SENSEX)) {

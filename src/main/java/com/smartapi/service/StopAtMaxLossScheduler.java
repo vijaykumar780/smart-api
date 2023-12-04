@@ -96,7 +96,7 @@ public class StopAtMaxLossScheduler {
     }
 
     private void memoryAlarmChecker() {
-        if (LocalTime.now().getSecond() % 50 == 0) {
+        if (LocalTime.now().getSecond() >= 50) {
             String s;
             Process p;
             try {

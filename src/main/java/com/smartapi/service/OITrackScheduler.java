@@ -208,13 +208,15 @@ public class OITrackScheduler {
             });*/
 
             symbolDataList.add(SymbolData.builder().expiryString("03NOV2023").symbol("smbl").strike(1500).name("symb").token("tkn").build());
-            log.info(com.smartapi.Constants.IMP_LOG+"Processed {} symbols. Oi change percent {}. Matched Expiries {}, Non match expiries {} for today", symbolDataList.size(), configs.getOiPercent(),
-                    matchedExpiries, jsonArray.length() - matchedExpiries);
-            log.info(com.smartapi.Constants.IMP_LOG+"Expiry today Nifty {}, Finnifty {}, midcap {}, bankNifty {}", isNiftyExpiry,
-                    isFinNiftyExpiry, isMidcapNiftyExpiry, isBankNiftyExpiry);
+            if (configs.isOiBasedTradeAllowed()) {
+                log.info(com.smartapi.Constants.IMP_LOG+"Processed {} symbols. Oi change percent {}. Matched Expiries {}, Non match expiries {} for today", symbolDataList.size(), configs.getOiPercent(),
+                        matchedExpiries, jsonArray.length() - matchedExpiries);
+                log.info(com.smartapi.Constants.IMP_LOG+"Expiry today Nifty {}, Finnifty {}, midcap {}, bankNifty {}", isNiftyExpiry,
+                        isFinNiftyExpiry, isMidcapNiftyExpiry, isBankNiftyExpiry);
+            }
             jsonArray = null;
         } catch (Exception e) {
-            log.error(com.smartapi.Constants.IMP_LOG+"Error in processing symbols at count {}, {}", cnt, e.getMessage());
+            log.error(com.smartapi.Constants.IMP_LOG + "Error in processing symbols at count {}, {}", cnt, e.getMessage());
         }
         if (success == 1) {
             configs.setSymbolDataList(symbolDataList);
@@ -280,7 +282,9 @@ public class OITrackScheduler {
             init();
             log.info(com.smartapi.Constants.IMP_LOG+"Loaded symbols");
         }
-
+        if (!configs.isOiBasedTradeAllowed()) {
+            log.info("Oi based trade not allowed as per configs, skipping");
+        }
         String today = LocalDate.now().format(DateTimeFormatter.ofPattern("ddMMMyyyy"));
         today = today.substring(0,5) + today.substring(7);
         today = today.toUpperCase();

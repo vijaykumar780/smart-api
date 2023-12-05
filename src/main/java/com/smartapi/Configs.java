@@ -121,6 +121,9 @@ public class Configs {
 	@Value("${maxLossAmount}")
 	private int maxLossAmount;
 
+	@Value("${isOiBasedTradeAllowed}")
+	private boolean isOiBasedTradeAllowed;
+
 	private List<SymbolData> symbolDataList;
 
 	private Map<String, SymbolData> symbolMap;

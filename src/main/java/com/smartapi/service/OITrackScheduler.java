@@ -284,6 +284,7 @@ public class OITrackScheduler {
         }
         if (!configs.isOiBasedTradeAllowed()) {
             log.info("Oi based trade not allowed as per configs, skipping");
+            return;
         }
         String today = LocalDate.now().format(DateTimeFormatter.ofPattern("ddMMMyyyy"));
         today = today.substring(0,5) + today.substring(7);

@@ -46,9 +46,13 @@ public class OITrackScheduler {
     double finalDiff = 12.0;
 
     // Price for multiple sell trades
-    double p1 = 25.0;
-    double p2 = 17.0;
+    double p1Percent = 20.0; // of initial price
+    double p2Percent = 30.0; // of initial price
     double p3 = 20.0;
+
+    int q1Percent = 50;
+
+    int q2Percent = 30;
 
     // loss percents
     double loss2 = 76.0;
@@ -991,7 +995,7 @@ public class OITrackScheduler {
             } else if (indexName.equals("NIFTY")) {
                 return sellLtp >= 5.0 ? true : false;
             } else if (indexName.equals("BANKNIFTY")) {
-                return sellLtp >= 10.0 ? true : false;
+                return sellLtp >= 9.0 ? true : false;
             } else if (indexName.equals(SENSEX)) {
                 return sellLtp >= 13.0 ? true : false;
             } else { // finnifty
@@ -1102,8 +1106,6 @@ public class OITrackScheduler {
             }
 
             int i;
-            String tradeToken = "";
-            Double price = 0.0;
 
             SymbolData sellSymbolData = fetchSellSymbol(tradeSymbol);
             opt = com.smartapi.Constants.IMP_LOG+"Oi based trade enabled. Initiating trade for " + sellSymbolData.getSymbol();
@@ -1143,8 +1145,8 @@ public class OITrackScheduler {
             double q1, q2, q3;
             double maxLoss = configs.getMaxLossAmount();
             Double sellLtp = getLtp(sellSymbolData.getToken(), indexName.equals(SENSEX) ? BSE_NFO: NSE_NFO);
-            q1 = getQ1Abs(maxLoss);
-            q2 = getQ2Abs(maxLoss, sellLtp);
+            q1 = (q1Percent / 100.0) * qty;
+            q2 = (q2Percent / 100.0) * qty;
 
             double lotSize;
             if (indexName.equals("MIDCPNIFTY")) {
@@ -1163,7 +1165,7 @@ public class OITrackScheduler {
             int fullBatches = qty / maxQty;
             int remainingQty = qty % maxQty;
             remainingQty = (remainingQty % (int) lotSize == 0) ? remainingQty : remainingQty - (remainingQty % (int) lotSize);
-            log.info(com.smartapi.Constants.IMP_LOG+"Trade Details: strikediff {}, price1 {}%, price2 {}%, price3 {}%, total qty {}\n", strikeDiff, p1, p2, p3, qty);
+            log.info(com.smartapi.Constants.IMP_LOG+"Trade Details: strikediff {}, price1 {}%, price2 {}%, price3 {}%, total qty {}\n", strikeDiff, p1Percent, p2Percent, p3, qty);
             SymbolData buySymbolData;
 
             String optionType = tradeSymbol.endsWith("CE") ? "CE" : "PE";
@@ -1204,21 +1206,20 @@ public class OITrackScheduler {
             }
 
             // initiate sell orders.
-
             q1 = q1 / lotSize;
             q2 = q2 / lotSize;
             //log.info("Q1 {}, Q2 {}", q1, q2);
-            Double trg1 = sellLtp - (sellLtp * p1) / 100.0;
-            Double trg2 = trg1 - (trg1 * p2) / 100.0;
+            Double trg1 = sellLtp - (sellLtp * p1Percent) / 100.0;
+            Double trg2 = sellLtp - (sellLtp * p2Percent) / 100.0;
             Double trg3 = trg2 - (trg2 * p3) / 100.0;
 
-            q3 = getQ3Abs(maxLoss, sellLtp, trg1, trg2);
+            q3 = qty - q1 - q2;
             q3 = q3 / lotSize;
 
             int intq1, intq2, intq3, intq4;
             intq1 = (int) q1 * (int) lotSize;
             intq2 = (int) q2 * (int) lotSize;
-            intq3 = (int) q3 * (int) lotSize;
+            intq3 = qty - intq1 - intq2;
 
             intq4 = qty - intq1 - intq2 - intq3;
             if (intq1>qty) {
@@ -1291,19 +1292,6 @@ public class OITrackScheduler {
                 }
             }
 
-            for (Integer qt : qtys4) {
-                sellOrder = stopAtMaxLossScheduler.placeOrder(sellSymbolData.getSymbol(), sellSymbolData.getToken(), sellLtp, qt, Constants.TRANSACTION_TYPE_SELL, trg3);
-                if (sellOrder != null) {
-                    opt = String.format(com.smartapi.Constants.IMP_LOG+"Sell order placed for %s, qty %d. Trigger price %f", sellSymbolData.getSymbol(), qt, trg3);
-                    log.info(opt);
-                    sendMessage.sendMessage(opt);
-                } else {
-                    opt = String.format(com.smartapi.Constants.IMP_LOG+"Sell order failed for %s, qty %d. Trigger price %f", sellSymbolData.getSymbol(), qt, trg3);
-                    log.info(opt);
-                    sendMessage.sendMessage(opt);
-                }
-            }
-
             configs.setOiBasedTradePlaced(true);
         } else {
             log.info(com.smartapi.Constants.IMP_LOG+"Trade found but oi based trade not enabled or trade already placed. Check if manual trade required. Sell {}\n", tradeSymbol);
@@ -1314,7 +1302,7 @@ public class OITrackScheduler {
 
     private double getQ2Abs(double maxLoss, Double sellLtp) {
 
-        return (((loss2 / 100.0) * maxLoss) - ((loss1 / 100.0) * maxLoss)) / (pointSl + ((sellLtp * p1) / 100.0));
+        return (((loss2 / 100.0) * maxLoss) - ((loss1 / 100.0) * maxLoss)) / (pointSl + ((sellLtp * p1Percent) / 100.0));
     }
 
     private double getQ1Abs(double maxLoss) {
@@ -1323,7 +1311,7 @@ public class OITrackScheduler {
     }
 
     private double getQ3Abs(double maxLoss, Double sellLtp, Double trg1, Double trg2) {
-        double q2 = (((loss2 / 100.0) * maxLoss) - ((loss1 / 100.0) * maxLoss)) / (pointSl + ((sellLtp * p1) / 100.0));
+        double q2 = (((loss2 / 100.0) * maxLoss) - ((loss1 / 100.0) * maxLoss)) / (pointSl + ((sellLtp * p1Percent) / 100.0));
         double q1 = (loss1 / 1000.0) * maxLoss;
         double p = trg2 + pointSl + 4.0;
 
@@ -1394,13 +1382,13 @@ public class OITrackScheduler {
 
             Double ltpLimit;
             if (indexName.equals("MIDCPNIFTY")) {
-                ltpLimit = 13.0;
+                ltpLimit = 5.0;
             } else if (indexName.equals("BANKNIFTY")) {
-                ltpLimit = 50.0;
+                ltpLimit = 20.0;
             } else if (indexName.equals(SENSEX)) {
                 ltpLimit = 50.0;
             } else {
-                ltpLimit = 32.0;
+                ltpLimit = 9.0;
             }
             log.info("Ltp limit {}", ltpLimit);
 
@@ -1481,11 +1469,8 @@ public class OITrackScheduler {
                 p2 = 10.0;
                 qty = configs.getOiBasedTradeQtyNonExp();
             }*/
-            double q1, q2, q3;
             double maxLoss = configs.getMaxLossAmount();
             Double sellLtp = getLtp(sellSymbolData.getToken(), indexName.equals(SENSEX) ? BSE_NFO: NSE_NFO);
-            q1 = getQ1Abs(maxLoss);
-            q2 = getQ2Abs(maxLoss, sellLtp);
 
             double lotSize;
             if (indexName.equals("MIDCPNIFTY")) {
@@ -1504,7 +1489,7 @@ public class OITrackScheduler {
             int fullBatches = qty / maxQty;
             int remainingQty = qty % maxQty;
             remainingQty = (remainingQty % (int) lotSize == 0) ? remainingQty : remainingQty - (remainingQty % (int) lotSize);
-            log.info(com.smartapi.Constants.IMP_LOG+"Trade Details: strikediff {}, price1 {}%, price2 {}%, total qty {}", strikeDiff, p1, p2, qty);
+            log.info(com.smartapi.Constants.IMP_LOG+"Trade Details: strikediff {}, price1 {}%, price2 {}%, total qty {}", strikeDiff, p1Percent, p2Percent, qty);
             SymbolData buySymbolData;
 
             String optionType = tradeSymbol.endsWith("CE") ? "CE" : "PE";

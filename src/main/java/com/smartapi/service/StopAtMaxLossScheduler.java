@@ -494,7 +494,6 @@ public class StopAtMaxLossScheduler {
                                  JSONArray ordersJsonArray,
                                  JSONArray positionsJsonArray) {
         try {
-              log.info("Placing strict sl order as loss at current loss of mtm {}", mtm);
                 int i;
                 String sellOptionSymbol = "";
                 double ltp = 0.0;
@@ -516,6 +515,7 @@ public class StopAtMaxLossScheduler {
                     }
                 }
                 if (sellOptionSymbol.isEmpty()) {
+                    log.info("Empty sell pos for strict sl, returning");
                     return;
                 }
 
@@ -555,7 +555,13 @@ public class StopAtMaxLossScheduler {
                     isStrictSlAlreadyPlaced = true;
                 }
 
+                if (!(LocalTime.now().isAfter(LocalTime.of(9, 15)) && LocalTime.now().isBefore(LocalTime.of(15, 30)))) {
+                    log.info("Strict sl skipped as non trading hours now");
+                    return;
+                }
+
                 if (!isStrictSlAlreadyPlaced) {
+                    log.info("Init strict sl process");
                     if (ordersJsonArray == null || ordersJsonArray.length() == 0) {
                         log.info("[processStrictSl] Orders array empty");
                     } else {
@@ -574,8 +580,9 @@ public class StopAtMaxLossScheduler {
                                 log.info("[processStrictSl] Cancelled order {}. Symbol {}. Order {}", order.optString("orderid"), order.optString("tradingsymbol"), cancelOrder);
                             }
                         }
+                        log.info(com.smartapi.Constants.IMP_LOG+"[processStrictSl] Cancelled all sl orders");
                     }
-                    log.info(com.smartapi.Constants.IMP_LOG+"[processStrictSl] Cancelled all sl orders");
+
                     Double ltpLimit;
                     if (sellOptionSymbol.startsWith("MIDCPNIFTY")) {
                         ltpLimit = 3.0;
@@ -624,6 +631,8 @@ public class StopAtMaxLossScheduler {
                         }
                         log.info(com.smartapi.Constants.IMP_LOG+"Placed strict sl orders");
                     }
+                } else {
+                    log.info("Strict sl orders already placed for qty {}, returning", orderQty);
                 }
         } catch (Exception e) {
             log.error(com.smartapi.Constants.IMP_LOG+"Error in sl trigger trades", e);

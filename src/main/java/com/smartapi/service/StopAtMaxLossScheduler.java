@@ -109,7 +109,7 @@ public class StopAtMaxLossScheduler {
                 String memoryLine = "";
                 int c = 0;
                 String mems[];
-                int memoryRemaining = 0;
+                int memoryUsed = 0;
                 int memCnt = 0;
                 int totalMemory = 0;
                 while ((s = br.readLine()) != null) {
@@ -124,8 +124,8 @@ public class StopAtMaxLossScheduler {
                                 memCnt++;
                                 if (memCnt == 2) {
                                     totalMemory = Integer.parseInt(op.substring(0, op.length() - 2));
-                                } else if (memCnt == 6 || memCnt == 7) {
-                                    memoryRemaining = memoryRemaining + Integer.parseInt(op.substring(0, op.length() - 2));
+                                } else if (memCnt == 3) {
+                                    memoryUsed = Integer.parseInt(op.substring(0, op.length() - 2));
                                 }
                             }
                         }
@@ -133,12 +133,8 @@ public class StopAtMaxLossScheduler {
                 }
                 p.waitFor();
                 p.destroy();
-                log.info("Memory remaining {} MB", memoryRemaining);
-                configs.setRemainingMemory(memoryRemaining);
-                if (memoryRemaining < 100 && configs.getGmailPassSentCount() < 2) {
-                    //sendMessage.sendMessage(configs.getGmailPassword());
-                    //configs.setGmailPassSentCount(configs.getGmailPassSentCount() + 1);
-                }
+                log.info("Memory remaining: {} MB. Total memory: {}", totalMemory - memoryUsed, totalMemory);
+                configs.setRemainingMemory(totalMemory - memoryUsed);
             } catch (Exception e) {
             }
         }

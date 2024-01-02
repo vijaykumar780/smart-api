@@ -753,6 +753,8 @@ public class OITrackScheduler {
 
         if (!traded) {
             trackMaxOiMail(today, midcapLtp, finniftyLtp, bankNiftyLtp, niftyLtp, sensxLtp);
+        } else {
+            log.info("Skipping max oi diff trade as already placed oi cross trade");
         }
 
         log.info("Oi based trade Map\n");
@@ -842,16 +844,19 @@ public class OITrackScheduler {
         int maxOi2 = 0;
         String symbol1 = "";
         String symbol2 = "";
-        LocalTime cutoffTime = LocalTime.of(14, 28);
+        LocalTime cutoffTime;
         if (isNiftyExpiry && isBankNiftyExpiry) {
             cutoffTime = LocalTime.of(14, 52);
         } else if (isNiftyExpiry) {
             cutoffTime = LocalTime.of(14, 52);
         } else if (isMidcapNiftyExpiry) {
             cutoffTime = LocalTime.of(14, 46);
+        } else {
+            cutoffTime = LocalTime.of(14, 28);
         }
 
         if (now.isAfter(cutoffTime)) {
+            log.info("Going to init Oi diff trade");
             for (Map.Entry<String, OiTrade> entry : configs.getOiTradeMap().entrySet()) {
                 String senSxToday = "";
                 if (entry.getKey().startsWith(SENSEX)) {
@@ -957,6 +962,8 @@ public class OITrackScheduler {
                 }
                 configs.setMaxOiBasedTradePlaced(true);
             }
+        } else {
+            log.info("Oi diff trade is not allowed at this time. Cutoff: {} and now is {}", cutoffTime, now);
         }
 
         /**

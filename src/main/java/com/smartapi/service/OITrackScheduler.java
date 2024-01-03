@@ -82,7 +82,10 @@ public class OITrackScheduler {
     private boolean isBankNiftyExpiry = false;
     private boolean isFinNiftyExpiry = false;
     private boolean isMidcapNiftyExpiry = false;
+
     private boolean isSensexExpiry = false;
+
+    private boolean isOiCrossTradeAllowed = false;
 
     @Scheduled(cron = "0 50 8 * * ?")
     public void reInitEmail() {
@@ -295,7 +298,7 @@ public class OITrackScheduler {
         today = today.toUpperCase();
         try {
             log.info("Configs used currently for oi based trade.oiPercent: {}\n oiBasedTradeEnabled: {}\n oiBasedTradePlaced {}\n midcapQty {}\n " +
-                            "Nifty qty {}\n Finnifty Qty {}\n Banknifty qty {}\n SEXSX Qty {}\n Today {}\n maxLoss Limit {}\n symbolsLoaded {}\n",
+                            "Nifty qty {}\n Finnifty Qty {}\n Banknifty qty {}\n SEXSX Qty {}\n Today {}\n maxLoss Limit {}\n symbolsLoaded {}\n isOiCrossTradeAllowed {}\n",
                     configs.getOiPercent(),
                     configs.isOiBasedTradeEnabled(),
                     configs.getOiBasedTradePlaced(),
@@ -305,7 +308,8 @@ public class OITrackScheduler {
                     configs.getOiBasedTradeBankNiftyQty(),
                     configs.getOiBasedTradeSensexQty(),
                     today, configs.getMaxLossAmount(),
-                    configs.getSymbolDataList().size());
+                    configs.getSymbolDataList().size(),
+                    isOiCrossTradeAllowed);
             } catch (Exception exception) {
         }
         // Any change made to from and to time here, should also be made in stop loss scheduler
@@ -626,7 +630,7 @@ public class OITrackScheduler {
                                     if (isNiftyExpiry && isBankNiftyExpiry) {
                                         bankNiftyCutoffTime = LocalTime.of(13, 30);
                                     }
-                                    if (LocalDate.now().getDayOfWeek().equals(DayOfWeek.TUESDAY)) {
+                                    if (LocalDate.now().getDayOfWeek().equals(DayOfWeek.TUESDAY) && isOiCrossTradeAllowed) {
                                         // finnifty only
                                         if (symbol.contains("FINNIFTY")) {
                                             log.info(opt);
@@ -640,7 +644,7 @@ public class OITrackScheduler {
                                             placeOrders(tradeSymbol);
                                             traded = true;
                                         }
-                                    } else if (LocalDate.now().getDayOfWeek().equals(DayOfWeek.THURSDAY)) {
+                                    } else if (LocalDate.now().getDayOfWeek().equals(DayOfWeek.THURSDAY) && isOiCrossTradeAllowed) {
                                         if (symbol.startsWith("NIFTY") && isNiftyOiCrossTradeEnabled
                                                 && LocalTime.now().isAfter(LocalTime.of(13, 30)) && LocalTime.now().isBefore(LocalTime.of(15, 15))) { // nifty
                                             log.info(opt);
@@ -653,7 +657,7 @@ public class OITrackScheduler {
                                             placeOrders(tradeSymbol);
                                             traded = true;
                                         }
-                                    } else if (LocalDate.now().getDayOfWeek().equals(DayOfWeek.MONDAY)) {
+                                    } else if (LocalDate.now().getDayOfWeek().equals(DayOfWeek.MONDAY) && isOiCrossTradeAllowed) {
                                         // nifty only
                                         if (symbol.startsWith("MIDCPNIFTY") && isMidcpNiftyOiCrossTradeEnabled
                                                 && LocalTime.now().isAfter(LocalTime.of(14, 30))
@@ -669,7 +673,7 @@ public class OITrackScheduler {
                                             placeOrders(tradeSymbol);
                                             traded = true;
                                         }
-                                    } else if (LocalDate.now().getDayOfWeek().equals(DayOfWeek.WEDNESDAY)) {
+                                    } else if (LocalDate.now().getDayOfWeek().equals(DayOfWeek.WEDNESDAY) && isOiCrossTradeAllowed) {
                                         // check banknifty first and then nifty
                                         if (symbol.contains(today) && symbol.startsWith("BANKNIFTY") && LocalTime.now().isAfter(bankNiftyCutoffTime)) { // BANKNIFTY
                                             log.info(opt);
@@ -683,7 +687,7 @@ public class OITrackScheduler {
                                             placeOrders(tradeSymbol);
                                             traded = true;
                                         }
-                                    } else if (LocalDate.now().getDayOfWeek().equals(DayOfWeek.FRIDAY)) {
+                                    } else if (LocalDate.now().getDayOfWeek().equals(DayOfWeek.FRIDAY) && isOiCrossTradeAllowed) {
                                         // nifty only
                                         if (symbol.contains(today) && symbol.startsWith("MIDCPNIFTY") && isMidcpNiftyOiCrossTradeEnabled
                                                 && LocalTime.now().isAfter(LocalTime.of(14, 30))
@@ -846,11 +850,11 @@ public class OITrackScheduler {
         String symbol2 = "";
         LocalTime cutoffTime;
         if (isNiftyExpiry && isBankNiftyExpiry) {
-            cutoffTime = LocalTime.of(14, 52);
+            cutoffTime = LocalTime.of(14, 40);
         } else if (isNiftyExpiry) {
-            cutoffTime = LocalTime.of(14, 52);
+            cutoffTime = LocalTime.of(14, 40);
         } else if (isMidcapNiftyExpiry) {
-            cutoffTime = LocalTime.of(14, 46);
+            cutoffTime = LocalTime.of(14, 40);
         } else {
             cutoffTime = LocalTime.of(14, 28);
         }

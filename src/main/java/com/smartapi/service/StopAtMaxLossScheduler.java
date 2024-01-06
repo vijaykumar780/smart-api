@@ -86,13 +86,6 @@ public class StopAtMaxLossScheduler {
         }
     }
 
-    @Scheduled(fixedDelay = 50000)
-    public void gc() {
-        System.gc();
-        log.info("GC, Total memory {}, Free memory {}, Max memory {}", Runtime.getRuntime().totalMemory()/1000000,
-                Runtime.getRuntime().freeMemory()/1000000, Runtime.getRuntime().maxMemory()/1000000);
-    }
-
     @Scheduled(fixedDelay = 4000)
     public void stopOnMaxLoss() throws Exception {
         memoryAlarmChecker();
@@ -1016,7 +1009,7 @@ public class StopAtMaxLossScheduler {
         }
     }
 
-    @Scheduled(cron = "0 5 7 * * *")
+    @Scheduled(cron = "0 15 8 * * *")
     public void reInitSession() {
         boolean initCt = false;
         for (int i = 0; i <= 5; i++) {

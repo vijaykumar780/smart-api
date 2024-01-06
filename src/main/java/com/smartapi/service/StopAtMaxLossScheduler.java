@@ -116,7 +116,12 @@ public class StopAtMaxLossScheduler {
                             if (!op.isEmpty()) {
                                 memCnt++;
                                 if (memCnt == 2) {
-                                    totalMemory = Integer.parseInt(op.substring(0, op.length() - 2));
+                                    if (op.contains("Gi")) {
+                                        totalMemory = (int) (Double.parseDouble(op.substring(0, op.length() - 2))*1000.0);
+                                    } else {
+                                        totalMemory = Integer.parseInt(op.substring(0, op.length() - 2));
+                                    }
+
                                 } else if (memCnt == 3) {
                                     memoryUsed = Integer.parseInt(op.substring(0, op.length() - 2));
                                 }

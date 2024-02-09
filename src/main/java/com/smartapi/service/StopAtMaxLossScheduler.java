@@ -86,7 +86,7 @@ public class StopAtMaxLossScheduler {
         }
     }
 
-    @Scheduled(fixedDelay = 4000)
+    @Scheduled(fixedDelay = 2000)
     public void stopOnMaxLoss() throws Exception {
         memoryAlarmChecker();
         stopOnMaxLossProcess(false);

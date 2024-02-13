@@ -108,7 +108,7 @@ public class OITrackScheduler {
             content.append("Traded Options: " + configs.getTradedOptions() + "\n");
             content.append("Oi Based trade placed: " + configs.getOiBasedTradePlaced() + "\n");
 
-            sendMessage.sendMessage(content.toString());
+            //sendMessage.sendMessage(content.toString());
             log.info(com.smartapi.Constants.IMP_LOG+"Data loaded of symbols");
         } else {
             sendMessage.sendMessage("Failed data loaded for symbols");

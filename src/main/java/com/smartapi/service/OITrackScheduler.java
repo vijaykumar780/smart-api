@@ -850,9 +850,9 @@ public class OITrackScheduler {
         String symbol2 = "";
         LocalTime cutoffTime;
         if (isNiftyExpiry && isBankNiftyExpiry) {
-            cutoffTime = LocalTime.of(14, 40);
+            cutoffTime = LocalTime.of(14, 50);
         } else if (isNiftyExpiry) {
-            cutoffTime = LocalTime.of(14, 40);
+            cutoffTime = LocalTime.of(14, 50);
         } else if (isMidcapNiftyExpiry) {
             cutoffTime = LocalTime.of(14, 40);
         } else {

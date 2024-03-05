@@ -145,12 +145,12 @@ public class OITrackScheduler {
             log.error(com.smartapi.Constants.IMP_LOG+"Failed fetching symbols, retrying");
             success = 0;
         }
+
         log.info(com.smartapi.Constants.IMP_LOG+"Fetched symbols");
-        int startIndex = response.toString().indexOf("[");
-        int endINdex = response.toString().indexOf(",[Server");
+
         int cnt = 0;
         try {
-            JSONArray jsonArray = new JSONArray(response.toString().substring(startIndex, endINdex));
+            JSONArray jsonArray = new JSONArray(response.getBody());
 
             symbolDataList = new ArrayList<>();
 

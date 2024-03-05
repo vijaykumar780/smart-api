@@ -64,5 +64,15 @@ public class SystemConfigs {
 
     private boolean isMaxOiBasedTradePlaced;
 
+    double niftyThresholdPrice;
+
+    double finniftyThresholdPrice;
+
+    double bankniftyThresholdPrice;
+
+    double midcapNiftyThresholdPrice;
+
+    double oneSideSlAmount;
+
     private String build;
 }

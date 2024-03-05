@@ -42,6 +42,25 @@ public class Configs {
 		return objectMapper;
 	}
 
+	// Iron Man configs
+
+	@Value("${niftyThresholdPrice}")
+	double niftyThresholdPrice;
+
+	@Value("${finniftyThresholdPrice}")
+	double finniftyThresholdPrice;
+
+	@Value("${bankniftyThresholdPrice}")
+	double bankniftyThresholdPrice;
+
+	@Value("${midcapNiftyThresholdPrice}")
+	double midcapNiftyThresholdPrice;
+
+	@Value("${one.side.slAmount}")
+	double oneSideSlAmount;
+
+	boolean ironManTradePlaced;
+
 	int maxLossEmailCount;
 	// modify for each day
 	boolean tradePlaced;

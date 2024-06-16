@@ -87,7 +87,7 @@ public class OITrackScheduler {
 
     private boolean isOiCrossTradeAllowed = false;
 
-    @Scheduled(cron = "0 50 8 * * ?")
+    // @Scheduled(cron = "0 50 8 * * ?")
     public void reInitEmail() {
         int success = 0;
         for (int i = 0; i < 10; i++) {
@@ -277,7 +277,7 @@ public class OITrackScheduler {
 
     }
 
-    @Scheduled(cron = "0 * * * * *")
+    //@Scheduled(cron = "0 * * * * *")
     public void tradeOnBasisOfOi() throws Exception {
         /*
         if total ce oi surpass total pe oi for some specific strike, then initiate a trade. sold option whose oi is larger after surpass

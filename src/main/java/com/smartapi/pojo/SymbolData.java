@@ -15,4 +15,5 @@ public class SymbolData {
     private String expiryString;
     private String name; // nifty, finnifty
     private int strike;
+    private String lotSize;
 }

@@ -124,6 +124,18 @@ public class Configs {
 	@Value("${isOiBasedTradeAllowed}")
 	private boolean isOiBasedTradeAllowed;
 
+	@Value("${isRR2TradeAllowed}")
+	private boolean isRR2TradeAllowed;
+
+	@Value("${isRR2TradePlaced}")
+	private boolean isRR2TradePlaced;
+
+	@Value("${rrProfit}")
+	private int rrProfit;
+
+	@Value("${rrLoss}")
+	private int rrLoss;
+
 	private List<SymbolData> symbolDataList;
 
 	private Map<String, SymbolData> symbolMap;

@@ -109,7 +109,7 @@ public class TokenRefresh {
         configs.setGmailPassSentCount(0);
         configs.setMaxOiBasedTradePlaced(false);
         configs.setSymbolToStrikeMap(new HashMap<>());
-
+        configs.setRR2TradePlaced(false);
         log.info(Constants.IMP_LOG+"Re inited email count threshold");
     }
 

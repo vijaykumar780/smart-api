@@ -208,6 +208,7 @@ public class RR2 {
 
         configs.setRR2TradePlaced(true);
         log.info("Set rr2 as true");
+        sendMessage.sendMessage("Set rr2 as true");
 
         String today = LocalDate.now().format(DateTimeFormatter.ofPattern("ddMMMyyyy"));
         today = today.substring(0,5) + today.substring(7);
@@ -244,9 +245,6 @@ public class RR2 {
 
         } catch (InterruptedException e) {
             log.error("Error fetch index ltp", e);
-        }
-        if (!(now1.isAfter(localStartTimeMarket) && now1.isBefore(localEndTime))) {
-            return;
         }
 
         int oi;
@@ -317,13 +315,46 @@ public class RR2 {
         log.info("Symbol map and oi map loaded");
 
         log.info("Oi Map is");
+        String indexExpiry = "";
+        if (isNiftyExpiry) {
+            indexExpiry = "NIFTY";
+        } else if (isBankNiftyExpiry) {
+            indexExpiry = "BANKNIFTY";
+        } else if (isFinNiftyExpiry) {
+            indexExpiry = "FINNIFTY";
+        } else if (isMidcapNiftyExpiry) {
+            indexExpiry = "MIDCPNIFTY";
+        } else {
+            log.info("no expiry today, skipping");
+        }
+
         for (Map.Entry<String, Integer> entry : oiMap.entrySet()) {
-            if (entry.getKey().endsWith("CE")) {
-                totalCeOi += entry.getValue();
-            } else {
-                totalPeOi += entry.getValue();
-            }
             log.info("{} : {}", entry.getKey(), entry.getValue());
+        }
+
+        for (Map.Entry<String, SymbolData> entry : configs.getSymbolMap().entrySet()) {
+            if (!entry.getKey().startsWith(indexExpiry)) {
+                continue;
+            }
+            int st = entry.getValue().getStrike();
+            /*if (isNiftyExpiry && Math.abs((double) st - niftyLtp)>250) {
+                continue;
+            }
+            if (isFinNiftyExpiry && Math.abs((double) st - finniftyLtp)>250) {
+                continue;
+            }
+            if (isMidcapNiftyExpiry && Math.abs((double) st - midcapLtp)>150) {
+                continue;
+            }
+            if (isBankNiftyExpiry && Math.abs((double) st - bankNiftyLtp)>400) {
+                continue;
+            }*/
+
+            if (entry.getKey().endsWith("CE")) {
+                totalCeOi += oiMap.get(entry.getValue().getSymbol());
+            } else {
+                totalPeOi += oiMap.get(entry.getValue().getSymbol());
+            }
         }
 
         String sellOptType = "";
@@ -354,7 +385,7 @@ public class RR2 {
             startStrike = ((int) midcapLtp / step) * step;
             initialSymbol = "MIDCPNIFTY"+"_"+startStrike+"_"+sellOptType;
         }
-        SymbolData sellSymbol = fetchSellSymbol(initialSymbol);
+        SymbolData sellSymbol = fetchSellSymbol(configs.getSymbolMap().get(initialSymbol).getSymbol());
         placeOrders(sellSymbol);
 
         System.gc();
@@ -403,6 +434,8 @@ public class RR2 {
 
         qty = (int) ((double) configs.getRrProfit() / (sellLtp - buyLtp));
         qty = (qty / lotSize) * lotSize;
+        qty = qty + lotSize;
+        sendMessage.sendMessage(String.format("Sell symbol: %s. Buy symbol: %s. Qty: %d", sellSymbolData.getSymbol(), buySymbolData.getSymbol(), qty));
 
         log.info("Total Qty to sell: {}", qty);
         double maxLoss = configs.getMaxLossAmount();

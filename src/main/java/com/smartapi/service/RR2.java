@@ -190,7 +190,9 @@ public class RR2 {
             init();
             log.info(com.smartapi.Constants.IMP_LOG+"Loaded symbols");
         }
-
+        LocalTime localStartTimeMarket = LocalTime.of(10, 15, 0);
+        LocalTime localEndTime = LocalTime.of(20, 20, 1);
+        LocalTime now1 = LocalTime.now();
         if (!configs.isRR2TradeAllowed()) {
             log.info("isRR2TradeAllowed is false, skipping");
             return;
@@ -206,6 +208,11 @@ public class RR2 {
             return;
         }
 
+        if (!(now1.isAfter(localStartTimeMarket) && now1.isBefore(localEndTime))) {
+            log.info("Skipping rr2 as Time not in range");
+            return;
+        }
+
         configs.setRR2TradePlaced(true);
         log.info("Set rr2 as true");
         sendMessage.sendMessage("Set rr2 as true");
@@ -214,9 +221,7 @@ public class RR2 {
         today = today.substring(0,5) + today.substring(7);
         today = today.toUpperCase();
 
-        LocalTime localStartTimeMarket = LocalTime.of(11, 50, 0);
-        LocalTime localEndTime = LocalTime.of(20, 20, 1);
-        LocalTime now1 = LocalTime.now();
+
 
         LocalDate expiryDateNifty = commonService.getExpiryDate(DayOfWeek.THURSDAY); // use wednesday if holiday on exp
         LocalDate expiryDateFinNifty = commonService.getExpiryDate(DayOfWeek.TUESDAY); // if holiday then skip its monday exp as midcap there

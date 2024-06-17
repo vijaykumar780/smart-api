@@ -65,4 +65,9 @@ public class SystemConfigs {
     private boolean isMaxOiBasedTradePlaced;
 
     private String build;
+
+    private Integer rrProfit;
+    private Integer rrLoss;
+    private boolean rr2Allowed;
+    private boolean rr2TradePlaced;
 }

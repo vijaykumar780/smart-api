@@ -181,6 +181,10 @@ public class Controller {
                     .maxProfit(configs.getMaxProfit())
                     .memoryRemaining(configs.getRemainingMemory())
                     .isMaxOiBasedTradePlaced(configs.isMaxOiBasedTradePlaced())
+                    .rrProfit(configs.getRrProfit())
+                    .rrLoss(configs.getRrLoss())
+                    .rr2Allowed(configs.isRR2TradeAllowed())
+                    .rr2TradePlaced(configs.isRR2TradePlaced())
                     .build(Constants.build)
                     .build();
 

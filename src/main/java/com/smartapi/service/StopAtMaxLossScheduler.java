@@ -223,7 +223,7 @@ public class StopAtMaxLossScheduler {
                                     boolean exitALLFlag,
                                     LocalTime now,
                                    List<String> slSymbols) throws InterruptedException {
-        boolean isExitAllPosRequired = fetch2xSlOnPositions(ordersJsonArray, positionsJsonArray);
+        boolean isExitAllPosRequired = false; //fetch2xSlOnPositions(ordersJsonArray, positionsJsonArray);
         boolean isExitRequiredForReTradeAtSl = isExitRequiredForReTradeAtSl(ordersJsonArray, positionsJsonArray, slSymbols);
 
         Double mtm = 0.00;
@@ -496,6 +496,8 @@ public class StopAtMaxLossScheduler {
                 String productType = "";
                 String token = "";
                  double sellAvgPrice = 0.0;
+                 double buyAvgPrice = 0.0;
+                int lotSize = 10;
                 for (i = 0; i < positionsJsonArray.length(); i++) {
                     JSONObject pos = positionsJsonArray.optJSONObject(i);
                     if (pos != null && pos.optString("netqty").contains("-")) {
@@ -505,9 +507,19 @@ public class StopAtMaxLossScheduler {
                         productType = pos.optString("producttype");
                         token = pos.optString("symboltoken");
                         sellAvgPrice = Double.parseDouble(pos.optString("sellavgprice"));
+                        lotSize = Integer.parseInt(pos.optString("lotsize"));
                         break;
                     }
                 }
+
+            for (i = 0; i < positionsJsonArray.length(); i++) {
+                JSONObject pos = positionsJsonArray.optJSONObject(i);
+                if (pos != null && !pos.optString("netqty").contains("-")) {
+                    buyAvgPrice = Double.parseDouble(pos.optString("buyavgprice"));
+                    break;
+                }
+            }
+
                 if (sellOptionSymbol.isEmpty()) {
                     log.info("Empty sell pos for strict sl, returning");
                     return;
@@ -516,19 +528,7 @@ public class StopAtMaxLossScheduler {
                 if (netQty < 0) {
                     netQty = - netQty;
                 }
-
-                int indexMaxSellQty;
-                if (sellOptionSymbol.startsWith("MIDCPNIFTY")) {
-                    indexMaxSellQty = configs.getOiBasedTradeMidcapQty();
-                } else if (sellOptionSymbol.startsWith("NIFTY")) {
-                    indexMaxSellQty = configs.getOiBasedTradeQtyNifty();
-                } else if (sellOptionSymbol.startsWith("BANKNIFTY")) {
-                    indexMaxSellQty = configs.getOiBasedTradeBankNiftyQty();
-                } else if (sellOptionSymbol.startsWith(SENSEX)) {
-                    indexMaxSellQty = configs.getOiBasedTradeSensexQty();
-                } else {
-                    indexMaxSellQty = configs.getOiBasedTradeQtyFinNifty();
-                }
+                double slPrice = ltp + (sellAvgPrice - buyAvgPrice)/2;
 
                 boolean isStrictSlAlreadyPlaced = false;
                 int orderQty = 0;
@@ -591,20 +591,18 @@ public class StopAtMaxLossScheduler {
                     }
 
                     if (!sellOptionSymbol.isEmpty()) {
-                        double triggerPriceForBuy = (sellAvgPrice <= ltpLimit) ? ((1 + rTorMaxOiTrade) * sellAvgPrice) : (2 * sellAvgPrice * rTorOiTrade);
                         int totalQty = (int) netQty;
-                        log.info("Found sold pos for strict sl {}. Trigger price: {}, total Qty {}", sellOptionSymbol, triggerPriceForBuy, totalQty);
+                        log.info("Found sold pos for strict sl {}. Trigger price: {}, total Qty {}, lotSize {}", sellOptionSymbol,
+                                slPrice, totalQty, lotSize);
                         int maxQty = maxQty(sellOptionSymbol);
 
                         int fullBatches = totalQty / maxQty;
                         int remainingQty = totalQty % maxQty;
-                        int lotSize = fetchLotSize(sellOptionSymbol);
                         remainingQty = (remainingQty % (int) lotSize == 0) ? remainingQty : remainingQty - (remainingQty % (int) lotSize);
 
                         String opt;
                         for (i = 0; i < fullBatches; i++) {
-
-                            Order order = slOrder(sellOptionSymbol, token, triggerPriceForBuy, maxQty, Constants.TRANSACTION_TYPE_BUY, productType);
+                            Order order = slOrder(sellOptionSymbol, token, slPrice, maxQty, Constants.TRANSACTION_TYPE_BUY, productType);
                             if (order != null) {
                                 opt = String.format("SL order placed for %s, qty %d", sellOptionSymbol, maxQty);
                                 log.info(opt);
@@ -614,7 +612,7 @@ public class StopAtMaxLossScheduler {
                             }
                         }
                         if (remainingQty > 0) {
-                            Order order = slOrder(sellOptionSymbol, token, triggerPriceForBuy, remainingQty, Constants.TRANSACTION_TYPE_BUY, productType);
+                            Order order = slOrder(sellOptionSymbol, token, slPrice, remainingQty, Constants.TRANSACTION_TYPE_BUY, productType);
                             if (order != null) {
                                 opt = String.format("SL order placed for %s, qty %d", sellOptionSymbol, remainingQty);
                                 log.info(opt);

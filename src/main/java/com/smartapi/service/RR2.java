@@ -185,11 +185,7 @@ public class RR2 {
 
     @Scheduled(fixedDelay = 60000)
     public void rr2() throws Exception {
-        if (configs.getSymbolDataList() == null || configs.getSymbolDataList().isEmpty()) {
-            log.info(com.smartapi.Constants.IMP_LOG+"Loading symbols");
-            init();
-            log.info(com.smartapi.Constants.IMP_LOG+"Loaded symbols");
-        }
+
         LocalTime localStartTimeMarket = LocalTime.of(10, 15, 0);
         LocalTime localEndTime = LocalTime.of(20, 20, 1);
         LocalTime now1 = LocalTime.now();
@@ -212,7 +208,12 @@ public class RR2 {
             log.info("Skipping rr2 as Time not in range");
             return;
         }
-
+        if (configs.getSymbolDataList() == null || configs.getSymbolDataList().isEmpty()) {
+            log.info(com.smartapi.Constants.IMP_LOG+"Loading symbols");
+            init();
+            log.info(com.smartapi.Constants.IMP_LOG+"Loaded symbols");
+        }
+        
         configs.setRR2TradePlaced(true);
         log.info("Set rr2 as true");
         sendMessage.sendMessage("Set rr2 as true");

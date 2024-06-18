@@ -213,7 +213,7 @@ public class RR2 {
             init();
             log.info(com.smartapi.Constants.IMP_LOG+"Loaded symbols");
         }
-        
+
         configs.setRR2TradePlaced(true);
         log.info("Set rr2 as true");
         sendMessage.sendMessage("Set rr2 as true");

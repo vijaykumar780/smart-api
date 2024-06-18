@@ -3,6 +3,6 @@ package com.smartapi;
 public class Constants {
     public static String IMP_LOG = "[IMP_LOG] ";
 
-    public static String build = "16.6.1";
+    public static String build = "18.6.1";
 
 }

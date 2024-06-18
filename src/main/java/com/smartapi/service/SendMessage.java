@@ -64,26 +64,6 @@ public class SendMessage {
 				log.error(Constants.IMP_LOG+"Error in sending mail ", e);
 			}
 		}
-
-		/*
-		HttpHeaders headers = new HttpHeaders();
-		String updateMessage = message.replaceAll(" ","+");
-		HttpEntity<String> httpEntity = new HttpEntity<>(headers);
-		ResponseEntity<Object> httpResponse;
-		String url = "https://api.callmebot.com/whatsapp.php?phone=918930091047&text="+updateMessage+"&apikey="+configs.getWhatsappApiKey();
-		try {
-			restTemplate.exchange(url, HttpMethod.GET, httpEntity, String.class);
-			//log.info("Fetched games {}", httpResponse.getBody().toString());
-			//return httpResponse.getBody();
-		} catch (Exception e) {
-			log.error("Error in sending message {}", message, e);
-			//return null;
-		}
-
-
-
-
-		 */
 	}
 }
 

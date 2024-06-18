@@ -431,6 +431,7 @@ public class RR2 {
         } else {
             strikeDiff = 150;
         }
+        strikeDiff = commonService.getIndexStepSize(indexName);
 
         int buyStrike = optionType.equals("CE") ? (sellSymbolData.getStrike() + strikeDiff) :
                 (sellSymbolData.getStrike() - strikeDiff);
@@ -510,6 +511,7 @@ public class RR2 {
 
         log.info("Sell orders placed");
         log.info("Finished RR2 trade");
+        sendMessage.sendMessage("RR2 Trade placed");
     }
 
     private SymbolData fetchSellSymbol(String tradeSymbol) {
@@ -527,13 +529,13 @@ public class RR2 {
 
             Double ltpLimit;
             if (indexName.equals("MIDCPNIFTY")) {
-                ltpLimit = 9.0;
+                ltpLimit = 17.0;
             } else if (indexName.equals("BANKNIFTY")) {
-                ltpLimit = 30.0;
+                ltpLimit = 70.0;
             } else if (indexName.equals(SENSEX)) {
                 ltpLimit = 50.0;
             } else {
-                ltpLimit = 15.0;
+                ltpLimit = 35.0;
             }
             log.info("Ltp limit {}", ltpLimit);
 

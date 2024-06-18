@@ -86,7 +86,7 @@ public class StopAtMaxLossScheduler {
         }
     }
 
-    @Scheduled(fixedDelay = 2000)
+    @Scheduled(fixedDelay = 1000)
     public void stopOnMaxLoss() throws Exception {
         memoryAlarmChecker();
         stopOnMaxLossProcess(false);
@@ -244,7 +244,7 @@ public class StopAtMaxLossScheduler {
         Double modifiedMaxLoss = maxLossAmount;
 
         // Strict sl orders to prevent slippages
-        processStrictSl(mtm, modifiedMaxLoss, ordersJsonArray, positionsJsonArray);
+        // processStrictSl(mtm, modifiedMaxLoss, ordersJsonArray, positionsJsonArray);
         configs.setMtm(mtm.intValue());
         configs.setMaxProfit((int) (sellamount - buyamount));
         if (LocalTime.now().getHour()>=20 && LocalTime.now().getHour()<=23) {

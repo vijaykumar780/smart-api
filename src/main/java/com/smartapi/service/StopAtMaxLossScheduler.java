@@ -240,17 +240,8 @@ public class StopAtMaxLossScheduler {
             }
         }
         boolean isTradeAllowed = true;
-        if (now.isAfter(LocalTime.of(9,15)) && now.isBefore(LocalTime.of(11,28)) && mtm != 0.00) {
-            isTradeAllowed = false;
-            String opt = "Check manually if all trades close. Time now is not allowed. Trade after 11:28";
-            log.info(opt);
-            sendMail(opt);
-        }
+
         Double modifiedMaxLoss = maxLossAmount;
-        /*boolean nonExpMaxProfit = false;
-        if (!isExpiry() && mtm >=0.0 && mtm>= ((double)configs.getNonExpMaxProfit())) {
-            nonExpMaxProfit = true;
-        }*/
 
         // Strict sl orders to prevent slippages
         processStrictSl(mtm, modifiedMaxLoss, ordersJsonArray, positionsJsonArray);

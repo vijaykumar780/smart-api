@@ -421,7 +421,7 @@ public class OITrackScheduler {
                         String response = String.format("Index: %s, Option: %s, current oi: %d, Change: %d Change percent: %f Symbol: %s", "NIFTY", symbolData.getStrike() + " " +
                                 symbolData.getSymbol().substring(symbolData.getSymbol().length() - 2), oi, oi - oiMap.get(symbolData.getSymbol()), changePercent, symbolData.getSymbol());
 
-                        if (Math.abs(changePercent) >= configs.getOiPercent() && oi > 500000 && symbolData.getSymbol().contains(today)) {
+                        if (Math.abs(changePercent) >= configs.getOiPercent() && oi > 200000 && symbolData.getSymbol().contains(today)) {
                             email.append(response);
                             email.append("\n\n");
                         } else if ((Math.abs(changePercent) >= configs.getOiPercent())) {
@@ -460,7 +460,7 @@ public class OITrackScheduler {
                         String response = String.format("Index: %s, Option: %s, current oi: %d, Change: %d Change percent: %f Symbol: %s", "FINNIFTY", symbolData.getStrike() + " " +
                                 symbolData.getSymbol().substring(symbolData.getSymbol().length() - 2), oi, oi - oiMap.get(symbolData.getSymbol()), changePercent, symbolData.getSymbol());
 
-                        if (Math.abs(changePercent) >= configs.getOiPercent() && oi > 500000 && symbolData.getSymbol().contains(today)) {
+                        if (Math.abs(changePercent) >= configs.getOiPercent() && oi > 200000 && symbolData.getSymbol().contains(today)) {
                             email.append(response);
                             email.append("\n\n");
                         } else if ((Math.abs(changePercent) >= configs.getOiPercent())) {
@@ -502,7 +502,7 @@ public class OITrackScheduler {
                         String response = String.format("Index: %s, Option: %s, current oi: %d, Change: %d Change percent: %f Symbol: %s", "MIDCPNIFTY", symbolData.getStrike() + " " +
                                 symbolData.getSymbol().substring(symbolData.getSymbol().length() - 2), oi, oi - oiMap.get(symbolData.getSymbol()), changePercent, symbolData.getSymbol());
 
-                        if (Math.abs(changePercent) >= configs.getOiPercent() && oi > 500000 && symbolData.getSymbol().contains(today)) {
+                        if (Math.abs(changePercent) >= configs.getOiPercent() && oi > 200000 && symbolData.getSymbol().contains(today)) {
                             email.append(response);
                             email.append("\n\n");
                         } else if ((Math.abs(changePercent) >= configs.getOiPercent())) {
@@ -541,7 +541,7 @@ public class OITrackScheduler {
                         String response = String.format("Index: %s, Option: %s, current oi: %d, Change: %d Change percent: %f Symbol: %s", "BANKNIFTY", symbolData.getStrike() + " " +
                                 symbolData.getSymbol().substring(symbolData.getSymbol().length() - 2), oi, oi - oiMap.get(symbolData.getSymbol()), changePercent, symbolData.getSymbol());
 
-                        if (Math.abs(changePercent) >= configs.getOiPercent() && oi > 500000 && symbolData.getSymbol().contains(today)) {
+                        if (Math.abs(changePercent) >= configs.getOiPercent() && oi > 200000 && symbolData.getSymbol().contains(today)) {
                             email.append(response);
                             email.append("\n\n");
                         } else if ((Math.abs(changePercent) >= configs.getOiPercent())) {
@@ -585,7 +585,7 @@ public class OITrackScheduler {
                         String response = String.format("Index: %s, Option: %s, current oi: %d, Change: %d Change percent: %f Symbol: %s", SENSEX, symbolData.getStrike() + " " +
                                 symbolData.getSymbol().substring(symbolData.getSymbol().length() - 2), oi, oi - oiMap.get(symbolData.getSymbol()), changePercent, symbolData.getSymbol());
 
-                        if (Math.abs(changePercent) >= configs.getOiPercent() && oi > 500000 && symbolData.getSymbol().contains(today)) {
+                        if (Math.abs(changePercent) >= configs.getOiPercent() && oi > 200000 && symbolData.getSymbol().contains(today)) {
                             email.append(response);
                             email.append("\n\n");
                         } else if ((Math.abs(changePercent) >= configs.getOiPercent())) {
@@ -1050,7 +1050,7 @@ public class OITrackScheduler {
             return oi;
         } else if (ceCount == 1) {
             ceCount++;
-            return 529275;
+            return 800000;
         } else {
             ceCount++;
             return 435435343;
@@ -1177,7 +1177,7 @@ public class OITrackScheduler {
             } else {
                 strikeDiff = 150;
             }
-            strikeDiff = getIndexStepSize(indexName);
+            // strikeDiff = getIndexStepSize(indexName);
 
             int buyStrike = optionType.equals("CE") ? (sellSymbolData.getStrike() + strikeDiff) :
                     (sellSymbolData.getStrike() - strikeDiff);

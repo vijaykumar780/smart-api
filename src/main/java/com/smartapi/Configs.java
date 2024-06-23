@@ -124,6 +124,15 @@ public class Configs {
 	@Value("${isOiBasedTradeAllowed}")
 	private boolean isOiBasedTradeAllowed;
 
+	@Value("${symbolFilePath}")
+	private String symbolFilePath;
+
+	@Value("${rrProfit}")
+	private int rrProfit;
+
+	@Value("${rrLoss}")
+	private int rrLoss;
+
 	private List<SymbolData> symbolDataList;
 
 	private Map<String, SymbolData> symbolMap;
@@ -169,6 +178,30 @@ public class Configs {
 	@Bean
 	PlacedOrders placedOrders() {
 		return new PlacedOrders();
+	}
+
+	public String getSymbolFilePath() {
+		return symbolFilePath;
+	}
+
+	public void setSymbolFilePath(String symbolFilePath) {
+		this.symbolFilePath = symbolFilePath;
+	}
+
+	public int getRrProfit() {
+		return rrProfit;
+	}
+
+	public void setRrProfit(int rrProfit) {
+		this.rrProfit = rrProfit;
+	}
+
+	public int getRrLoss() {
+		return rrLoss;
+	}
+
+	public void setRrLoss(int rrLoss) {
+		this.rrLoss = rrLoss;
 	}
 
 	@Bean

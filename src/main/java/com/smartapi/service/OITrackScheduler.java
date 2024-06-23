@@ -16,6 +16,10 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
 import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -85,7 +89,7 @@ public class OITrackScheduler {
 
     private boolean isSensexExpiry = false;
 
-    private boolean isOiCrossTradeAllowed = false;
+    private boolean isOiCrossTradeAllowed = true;
 
     @Scheduled(cron = "0 50 8 * * ?")
     public void reInitEmail() {
@@ -126,34 +130,55 @@ public class OITrackScheduler {
         configs.setSensxSymbolData(new HashMap<>());
         configs.setSymbolToStrikeMap(new HashMap<>());
 
-        log.info(com.smartapi.Constants.IMP_LOG+"Initializing rest template");
+        log.info(com.smartapi.Constants.IMP_LOG + "Initializing rest template");
         restTemplate = new RestTemplateBuilder().setConnectTimeout(Duration.ofSeconds(10))
                 .setReadTimeout(Duration.ofSeconds(10))
                 .build();
-        log.info(com.smartapi.Constants.IMP_LOG+"Rest template initialized");
-        log.info(com.smartapi.Constants.IMP_LOG+"Fetching symbols");
+        log.info(com.smartapi.Constants.IMP_LOG + "Rest template initialized");
+        log.info(com.smartapi.Constants.IMP_LOG + "Fetching symbols");
         HttpEntity<String> httpEntity = new HttpEntity<String>("ip");
         ResponseEntity<String> response;
+        StringBuilder symbolsString = new StringBuilder();
+        File symbolsFile = null;
+        FileReader fileReader = null;
+        BufferedReader bufferedReader = null;
         try {
-            response = restTemplate.exchange("https://margincalculator.angelbroking.com/OpenAPI_File/files/OpenAPIScripMaster.json",
-                    HttpMethod.GET, httpEntity, String.class);
+            symbolsFile = new File(configs.getSymbolFilePath());
+            String data;
+            fileReader = new FileReader(symbolsFile);
+            bufferedReader = new BufferedReader(fileReader);
+            while ((data = bufferedReader.readLine()) != null) {
+                symbolsString.append(data);
+            }
             success = 1;
-
         } catch (Exception e) {
-            response = restTemplate.exchange("https://margincalculator.angelbroking.com/OpenAPI_File/files/OpenAPIScripMaster.json",
-                    HttpMethod.GET, httpEntity, String.class);
-            log.error(com.smartapi.Constants.IMP_LOG+"Failed fetching symbols, retrying");
+            log.error(com.smartapi.Constants.IMP_LOG + "Failed fetching symbols" + e);
             success = 0;
+        } finally {
+            if (fileReader != null) {
+                try {
+                    fileReader.close();
+                } catch (IOException e) {
+                    log.error("Failed closing file reader", e);
+                }
+            }
+            if (bufferedReader != null) {
+                try {
+                    bufferedReader.close();
+                } catch (IOException e) {
+                    log.error("Failed closing buffered reader", e);
+                }
+            }
         }
 
-        log.info(com.smartapi.Constants.IMP_LOG+"Fetched symbols");
+        log.info(com.smartapi.Constants.IMP_LOG + "Fetched symbols");
 
         int cnt = 0;
         try {
-            JSONArray jsonArray = new JSONArray(response.getBody());
+            JSONArray jsonArray = new JSONArray(symbolsString.toString());
+            log.info("Total symbols in file {}", jsonArray.length());
 
             symbolDataList = new ArrayList<>();
-
             String today = LocalDate.now().format(DateTimeFormatter.ofPattern("ddMMMyyyy"));
             int nonMatchedExpiries = 0;
             int matchedExpiries = 0;
@@ -173,16 +198,16 @@ public class OITrackScheduler {
                             .strike(((int) Double.parseDouble(ob.optString("strike"))) / 100)
                             .build();
                     cnt++;
-                    if (symbolData.getSymbol()!=null && symbolData.getSymbol().startsWith("NIFTY")) {
+                    if (symbolData.getSymbol() != null && symbolData.getSymbol().startsWith("NIFTY")) {
                         isNiftyExpiry = true;
                     }
-                    if (symbolData.getSymbol()!=null && symbolData.getSymbol().startsWith("FINNIFTY")) {
+                    if (symbolData.getSymbol() != null && symbolData.getSymbol().startsWith("FINNIFTY")) {
                         isFinNiftyExpiry = true;
                     }
-                    if (symbolData.getSymbol()!=null && symbolData.getSymbol().startsWith("MIDCPNIFTY")) {
+                    if (symbolData.getSymbol() != null && symbolData.getSymbol().startsWith("MIDCPNIFTY")) {
                         isMidcapNiftyExpiry = true;
                     }
-                    if (symbolData.getSymbol()!=null && symbolData.getSymbol().startsWith("BANKNIFTY")) {
+                    if (symbolData.getSymbol() != null && symbolData.getSymbol().startsWith("BANKNIFTY")) {
                         isBankNiftyExpiry = true;
                     }
                     if (Arrays.asList("NIFTY", "FINNIFTY", "MIDCPNIFTY", "BANKNIFTY", SENSEX).contains(symbolData.getName())
@@ -216,9 +241,9 @@ public class OITrackScheduler {
 
             symbolDataList.add(SymbolData.builder().expiryString("03NOV2023").symbol("smbl").strike(1500).name("symb").token("tkn").build());
             if (configs.isOiBasedTradeAllowed()) {
-                log.info(com.smartapi.Constants.IMP_LOG+"Processed {} symbols. Oi change percent {}. Matched Expiries {}, Non match expiries {} for today", symbolDataList.size(), configs.getOiPercent(),
+                log.info(com.smartapi.Constants.IMP_LOG + "Processed {} symbols. Oi change percent {}. Matched Expiries {}, Non match expiries {} for today", symbolDataList.size(), configs.getOiPercent(),
                         matchedExpiries, jsonArray.length() - matchedExpiries);
-                log.info(com.smartapi.Constants.IMP_LOG+"Expiry today Nifty {}, Finnifty {}, midcap {}, bankNifty {}", isNiftyExpiry,
+                log.info(com.smartapi.Constants.IMP_LOG + "Expiry today Nifty {}, Finnifty {}, midcap {}, bankNifty {}", isNiftyExpiry,
                         isFinNiftyExpiry, isMidcapNiftyExpiry, isBankNiftyExpiry);
             }
             jsonArray = null;
@@ -277,22 +302,32 @@ public class OITrackScheduler {
 
     }
 
-    @Scheduled(cron = "0 * * * * *")
+    @Scheduled(fixedDelay = 60000)
     public void tradeOnBasisOfOi() throws Exception {
         /*
         if total ce oi surpass total pe oi for some specific strike, then initiate a trade. sold option whose oi is larger after surpass
         incident found on today, when 19600 pe oi surpassed 19600 ce oi and 19600 pe became 0 from 12 to 0.
         similarly for 19650 strike.
          */
+        if (!configs.isOiBasedTradeAllowed()) {
+            log.info("Oi based trade not allowed as per configs, skipping");
+            return;
+        }
+
+        LocalTime localStartTimeMarket = LocalTime.of(11, 45, 0);
+        LocalTime localEndTime = LocalTime.of(20, 20, 1);
+        LocalTime now1 = LocalTime.now();
+        if (!(now1.isAfter(localStartTimeMarket) && now1.isBefore(localEndTime))) {
+            log.info("Oi based trade not allowed as time is not bw {} and {}", localStartTimeMarket, localEndTime);
+            return;
+        }
+
         if (configs.getSymbolDataList() == null || configs.getSymbolDataList().isEmpty()) {
             log.info(com.smartapi.Constants.IMP_LOG+"Loading symbols");
             init();
             log.info(com.smartapi.Constants.IMP_LOG+"Loaded symbols");
         }
-        if (!configs.isOiBasedTradeAllowed()) {
-            log.info("Oi based trade not allowed as per configs, skipping");
-            return;
-        }
+
         String today = LocalDate.now().format(DateTimeFormatter.ofPattern("ddMMMyyyy"));
         today = today.substring(0,5) + today.substring(7);
         today = today.toUpperCase();
@@ -313,10 +348,6 @@ public class OITrackScheduler {
             } catch (Exception exception) {
         }
         // Any change made to from and to time here, should also be made in stop loss scheduler
-        // Time now is not allowed.
-        LocalTime localStartTimeMarket = LocalTime.of(11, 50, 0);
-        LocalTime localEndTime = LocalTime.of(20, 20, 1);
-        LocalTime now1 = LocalTime.now();
 
         LocalDate expiryDateNifty = getExpiryDate(DayOfWeek.THURSDAY); // use wednesday if holiday on exp
         LocalDate expiryDateFinNifty = getExpiryDate(DayOfWeek.TUESDAY); // if holiday then skip its monday exp as midcap there
@@ -351,9 +382,7 @@ public class OITrackScheduler {
         } catch (InterruptedException e) {
             log.error("Error fetch index ltp", e);
         }
-        if (!(now1.isAfter(localStartTimeMarket) && now1.isBefore(localEndTime))) {
-            return;
-        }
+
 
         int oi;
         int niftyDiff = 500; // index value diff
@@ -576,10 +605,7 @@ public class OITrackScheduler {
                 log.error(com.smartapi.Constants.IMP_LOG+"Error in fetching oi of symbol {}", symbolData.getSymbol(), e);
             }
         }
-        /*log.info("Oi Map:");
-        for (Map.Entry<String, Integer> entry : oiMap.entrySet()) {
-            log.info("{} : {}", entry.getKey(), entry.getValue());
-        }*/
+
         if (LocalTime.now().isAfter(LocalTime.of(14, 10)) && !email.toString().isEmpty()) {
             sendMessage.sendMessage(email.toString());
         }
@@ -628,7 +654,7 @@ public class OITrackScheduler {
                                             .peOi(newPeOi).eligible(false).build());
                                     LocalTime bankNiftyCutoffTime = LocalTime.of(11, 30);
                                     if (isNiftyExpiry && isBankNiftyExpiry) {
-                                        bankNiftyCutoffTime = LocalTime.of(13, 30);
+                                        bankNiftyCutoffTime = LocalTime.of(13, 0);
                                     }
                                     if (LocalDate.now().getDayOfWeek().equals(DayOfWeek.TUESDAY) && isOiCrossTradeAllowed) {
                                         // finnifty only
@@ -645,8 +671,7 @@ public class OITrackScheduler {
                                             traded = true;
                                         }
                                     } else if (LocalDate.now().getDayOfWeek().equals(DayOfWeek.THURSDAY) && isOiCrossTradeAllowed) {
-                                        if (symbol.startsWith("NIFTY") && isNiftyOiCrossTradeEnabled
-                                                && LocalTime.now().isAfter(LocalTime.of(13, 30)) && LocalTime.now().isBefore(LocalTime.of(15, 15))) { // nifty
+                                        if (symbol.startsWith("NIFTY") && isNiftyOiCrossTradeEnabled) { // nifty
                                             log.info(opt);
                                             sendMessage.sendMessage(opt);
                                             placeOrders(tradeSymbol);
@@ -660,7 +685,7 @@ public class OITrackScheduler {
                                     } else if (LocalDate.now().getDayOfWeek().equals(DayOfWeek.MONDAY) && isOiCrossTradeAllowed) {
                                         // nifty only
                                         if (symbol.startsWith("MIDCPNIFTY") && isMidcpNiftyOiCrossTradeEnabled
-                                                && LocalTime.now().isAfter(LocalTime.of(14, 30))
+                                                && LocalTime.now().isAfter(LocalTime.of(12, 0))
                                                 && LocalTime.now().isBefore(LocalTime.of(15, 20))) { // MIDCPNIFTY
                                             log.info(opt);
                                             sendMessage.sendMessage(opt);
@@ -680,8 +705,7 @@ public class OITrackScheduler {
                                             sendMessage.sendMessage(opt);
                                             placeOrders(tradeSymbol);
                                             traded = true;
-                                        } else if (symbol.contains(today) && symbol.startsWith("NIFTY") && isNiftyOiCrossTradeEnabled
-                                            && LocalTime.now().isAfter(LocalTime.of(13, 30)) && LocalTime.now().isBefore(LocalTime.of(15, 15))) { // NIFTY
+                                        } else if (symbol.contains(today) && symbol.startsWith("NIFTY") && isNiftyOiCrossTradeEnabled) { // NIFTY
                                             log.info(opt);
                                             sendMessage.sendMessage(opt);
                                             placeOrders(tradeSymbol);
@@ -690,7 +714,7 @@ public class OITrackScheduler {
                                     } else if (LocalDate.now().getDayOfWeek().equals(DayOfWeek.FRIDAY) && isOiCrossTradeAllowed) {
                                         // nifty only
                                         if (symbol.contains(today) && symbol.startsWith("MIDCPNIFTY") && isMidcpNiftyOiCrossTradeEnabled
-                                                && LocalTime.now().isAfter(LocalTime.of(14, 30))
+                                                && LocalTime.now().isAfter(LocalTime.of(12, 0))
                                                 && LocalTime.now().isBefore(LocalTime.of(15, 20))) { // MIDCPNIFTY
                                             log.info(opt);
                                             sendMessage.sendMessage(opt);
@@ -836,7 +860,7 @@ public class OITrackScheduler {
                                 double bankNiftyLtp,
                                 double niftyLtp,
                                 double sensxLtp) throws Exception {
-        if (configs.isMaxOiBasedTradePlaced()) {
+        if (configs.isMaxOiBasedTradePlaced() || configs.getOiBasedTradePlaced()) {
             log.info("Max oi based trade already placed, Returning from max oi based trade");
             return;
         }
@@ -850,13 +874,13 @@ public class OITrackScheduler {
         String symbol2 = "";
         LocalTime cutoffTime;
         if (isNiftyExpiry && isBankNiftyExpiry) {
-            cutoffTime = LocalTime.of(14, 50);
+            cutoffTime = LocalTime.of(14, 25);
         } else if (isNiftyExpiry) {
-            cutoffTime = LocalTime.of(14, 50);
+            cutoffTime = LocalTime.of(14, 25);
         } else if (isMidcapNiftyExpiry) {
-            cutoffTime = LocalTime.of(14, 40);
+            cutoffTime = LocalTime.of(14, 25);
         } else {
-            cutoffTime = LocalTime.of(14, 28);
+            cutoffTime = LocalTime.of(14, 25);
         }
 
         if (now.isAfter(cutoffTime)) {
@@ -958,12 +982,7 @@ public class OITrackScheduler {
                 String op = String.format(com.smartapi.Constants.IMP_LOG+"Max oi based trade is being initiated for symbol %s. Oi diff: %d", sellSymbol, Math.max(diff2, diff1));
                 log.info(op);
                 sendMessage.sendMessage(op);
-                
-                if (isMultiSubTrade(sellSymbol)) {
-                    placeOrders(sellSymbol);
-                } else {
-                    placeOrdersForMaxOi(sellSymbol);
-                }
+                placeOrders(sellSymbol);
                 configs.setMaxOiBasedTradePlaced(true);
             }
         } else {
@@ -1092,20 +1111,43 @@ public class OITrackScheduler {
         return isAnotherTradeAllowed;
     }
 
+    public int fetchLotSize(String index) {
+        if (index.startsWith("NIFTY")) {
+            return configs.getNiftyLotSize();
+        } else if (index.startsWith("FINNIFTY")) {
+            return  configs.getFinniftyLotSize();
+        } else if (index.startsWith("MIDCPNIFTY")) {
+            return configs.getMidcapNiftyLotSize();
+        } else if (index.startsWith("BANKNIFTY")) {
+           return configs.getBankNiftyLotSize();
+        } else {
+            return configs.getSensexLotSize();
+        }
+    }
+
+    public int getIndexStepSize(String indexName) {
+        int step;
+        if (indexName.equals("MIDCPNIFTY")) {
+            step = 25;
+        } else if (indexName.equals("BANKNIFTY")) {
+            step = 100;
+        } else if (indexName.equals(SENSEX)) {
+            step = 100;
+        } else {
+            step = 50;
+        }
+        return step;
+    }
+
     public void placeOrders(String tradeSymbol) throws Exception {
         String opt = "";
 
-        boolean isAnotherTradeAllowed = isNewTradeAllowed(tradeSymbol);
-        if ((configs.isOiBasedTradeEnabled() && !configs.getOiBasedTradePlaced())
-                || isAnotherTradeAllowed) {
-
+        // boolean isAnotherTradeAllowed = isNewTradeAllowed(tradeSymbol);
+        if ((configs.isOiBasedTradeEnabled() && !configs.getOiBasedTradePlaced())) {
             int qty;
             String indexName = getIndexName(tradeSymbol);
+            int lotSize = fetchLotSize(indexName);
             int maxQty = 500;
-            /**
-             * Make max qty changes in stop at max loss scheduler also
-             */
-
             if (indexName.equals("MIDCPNIFTY")) {
                 maxQty = 4200;
             } else if (indexName.equals("BANKNIFTY")) {
@@ -1115,14 +1157,15 @@ public class OITrackScheduler {
             } else {
                 maxQty = 1800;
             }
-
+            log.info("Index name: {}", indexName);
+            log.info("Max qty per order {}", maxQty);
             int i;
 
             SymbolData sellSymbolData = fetchSellSymbol(tradeSymbol);
-            opt = com.smartapi.Constants.IMP_LOG+"Oi based trade enabled. Initiating trade for " + sellSymbolData.getSymbol();
-            log.info(opt);
-            sendMessage.sendMessage(opt);
+            Double sellLtp = getLtp(sellSymbolData.getToken(), indexName.equals(SENSEX) ? BSE_NFO : NSE_NFO);
+            String optionType = tradeSymbol.endsWith("CE") ? "CE" : "PE";
             int strikeDiff;
+            log.info("Sell symbol: {}, ltp: {}", sellSymbolData.getSymbol(), sellLtp);
 
             strikeDiff = 100; // used for buy order
             if (indexName.equals("MIDCPNIFTY")) {
@@ -1132,57 +1175,28 @@ public class OITrackScheduler {
             } else if (indexName.equals(SENSEX)) {
                 strikeDiff = 300;
             } else {
-                strikeDiff = 100;
+                strikeDiff = 150;
             }
+            strikeDiff = getIndexStepSize(indexName);
 
-            if (indexName.equals("MIDCPNIFTY")) {
-                qty = configs.getOiBasedTradeMidcapQty();
-            } else if (indexName.equals("NIFTY")) {
-                qty = configs.getOiBasedTradeQtyNifty();
-            } else if (indexName.equals("BANKNIFTY")) {
-                qty = configs.getOiBasedTradeBankNiftyQty();
-            } else if (indexName.equals(SENSEX)) {
-                qty = configs.getOiBasedTradeSensexQty();
-            } else {
-                qty = configs.getOiBasedTradeQtyFinNifty();
-            }
+            int buyStrike = optionType.equals("CE") ? (sellSymbolData.getStrike() + strikeDiff) :
+                    (sellSymbolData.getStrike() - strikeDiff);
+            SymbolData buySymbolData = configs.getSymbolMap().get(indexName + "_" + buyStrike + "_" + optionType);
+            Double buyLtp = getLtp(buySymbolData.getToken(), indexName.equals(SENSEX) ? BSE_NFO : NSE_NFO);
+            log.info("Buy symbol: {}, ltp: {}", buySymbolData.getSymbol(), buyLtp);
 
-            /*} else {
-                strikeDiff = 200;
-                p1 = 10.0;
-                p2 = 10.0;
-                qty = configs.getOiBasedTradeQtyNonExp();
-            }*/
-            double q1, q2, q3;
+            qty = (int) ((double) configs.getRrProfit() / (sellLtp - buyLtp));
+            qty = (qty / lotSize) * lotSize;
+            qty = qty + lotSize;
+            sendMessage.sendMessage(String.format("Sell symbol: %s. Buy symbol: %s. Qty: %d", sellSymbolData.getSymbol(), buySymbolData.getSymbol(), qty));
+
+            log.info("Total Qty to sell: {}", qty);
             double maxLoss = configs.getMaxLossAmount();
-            Double sellLtp = getLtp(sellSymbolData.getToken(), indexName.equals(SENSEX) ? BSE_NFO: NSE_NFO);
-            q1 = (q1Percent / 100.0) * qty;
-            q2 = (q2Percent / 100.0) * qty;
-
-            double lotSize;
-            if (indexName.equals("MIDCPNIFTY")) {
-                lotSize = configs.getMidcapNiftyLotSize();
-            } else if (indexName.equals("NIFTY")) {
-                lotSize = configs.getNiftyLotSize();
-            } else if (indexName.equals("BANKNIFTY")) {
-                lotSize = configs.getBankNiftyLotSize();
-            } else if (indexName.equals(SENSEX)) {
-                lotSize = configs.getSensexLotSize();
-            } else {
-                lotSize = configs.getFinniftyLotSize();
-            }
-            log.info(com.smartapi.Constants.IMP_LOG+"Max Qty {}. Index {}. Tradable Qty {}, LotSize {}\n", maxQty, indexName, qty, lotSize);
 
             int fullBatches = qty / maxQty;
             int remainingQty = qty % maxQty;
             remainingQty = (remainingQty % (int) lotSize == 0) ? remainingQty : remainingQty - (remainingQty % (int) lotSize);
-            log.info(com.smartapi.Constants.IMP_LOG+"Trade Details: strikediff {}, price1 {}%, price2 {}%, price3 {}%, total qty {}\n", strikeDiff, p1Percent, p2Percent, p3, qty);
-            SymbolData buySymbolData;
-
-            String optionType = tradeSymbol.endsWith("CE") ? "CE" : "PE";
-            int buyStrike = optionType.equals("CE") ? (sellSymbolData.getStrike() + strikeDiff) :
-                    (sellSymbolData.getStrike() - strikeDiff);
-            buySymbolData = configs.getSymbolMap().get(indexName + "_" + buyStrike + "_" + optionType);
+            log.info("Buy: full batch: {}, remain qty: {}", fullBatches, remainingQty);
 
             List<String> tradedOptions = configs.getTradedOptions();
             tradedOptions.add(sellSymbolData.getSymbol());
@@ -1190,15 +1204,14 @@ public class OITrackScheduler {
             configs.setTradedOptions(tradedOptions);
 
             // place full and remaining orders.
-            Double buyLtp = getLtp(buySymbolData.getToken(), indexName.equals(SENSEX) ? BSE_NFO: NSE_NFO);
             for (i = 0; i < fullBatches; i++) {
                 Order order = stopAtMaxLossScheduler.placeOrder(buySymbolData.getSymbol(), buySymbolData.getToken(), buyLtp, maxQty, Constants.TRANSACTION_TYPE_BUY, 0.0);
                 if (order != null) {
-                    opt = String.format(com.smartapi.Constants.IMP_LOG+"Buy order placed for %s, qty %d", buySymbolData.getSymbol(), maxQty);
+                    opt = String.format(com.smartapi.Constants.IMP_LOG + "Buy order placed for %s, qty %d", buySymbolData.getSymbol(), maxQty);
                     log.info(opt);
                     sendMessage.sendMessage(opt);
                 } else {
-                    opt = String.format(com.smartapi.Constants.IMP_LOG+"Buy order failed for %s, qty %d", buySymbolData.getSymbol(), maxQty);
+                    opt = String.format(com.smartapi.Constants.IMP_LOG + "Buy order failed for %s, qty %d", buySymbolData.getSymbol(), maxQty);
                     log.info(opt);
                     sendMessage.sendMessage(opt);
                 }
@@ -1206,103 +1219,45 @@ public class OITrackScheduler {
             if (remainingQty > 0) {
                 Order order = stopAtMaxLossScheduler.placeOrder(buySymbolData.getSymbol(), buySymbolData.getToken(), buyLtp, remainingQty, Constants.TRANSACTION_TYPE_BUY, 0.0);
                 if (order != null) {
-                    opt = String.format(com.smartapi.Constants.IMP_LOG+"Buy order placed for %s, qty %d", buySymbolData.getSymbol(), remainingQty);
+                    opt = String.format(com.smartapi.Constants.IMP_LOG + "Buy order placed for %s, qty %d", buySymbolData.getSymbol(), remainingQty);
                     log.info(opt);
                     sendMessage.sendMessage(opt);
                 } else {
-                    opt = String.format(com.smartapi.Constants.IMP_LOG+"Buy order failed for %s, qty %d", buySymbolData.getSymbol(), remainingQty);
+                    opt = String.format(com.smartapi.Constants.IMP_LOG + "Buy order failed for %s, qty %d", buySymbolData.getSymbol(), remainingQty);
                     log.info(opt);
                     sendMessage.sendMessage(opt);
                 }
             }
+            log.info("Buy orders placed");
 
-            // initiate sell orders.
-            q1 = q1 / lotSize;
-            q2 = q2 / lotSize;
-            //log.info("Q1 {}, Q2 {}", q1, q2);
-            Double trg1 = sellLtp - (sellLtp * p1Percent) / 100.0;
-            Double trg2 = sellLtp - (sellLtp * p2Percent) / 100.0;
-            Double trg3 = trg2 - (trg2 * p3) / 100.0;
-
-            q3 = qty - q1 - q2;
-            q3 = q3 / lotSize;
-
-            int intq1, intq2, intq3, intq4;
-            intq1 = (int) q1 * (int) lotSize;
-            intq2 = (int) q2 * (int) lotSize;
-            intq3 = qty - intq1 - intq2;
-
-            intq4 = qty - intq1 - intq2 - intq3;
-            if (intq1>qty) {
-                log.info(com.smartapi.Constants.IMP_LOG+"Adjusting Q1");
-                intq1 = qty;
-                intq2 = 0;
-                intq3 = 0;
-                intq4 = 0;
-            } else if (intq1+intq2>qty) {
-                log.info(com.smartapi.Constants.IMP_LOG+"Adjusting Qty2");
-                intq2 = qty - intq1;
-
-                intq3 = 0;
-                intq4 = 0;
-            } else if (intq1+intq2+intq3>qty) {
-                log.info(com.smartapi.Constants.IMP_LOG+"Adjusting Qty3");
-                intq3 = qty - intq1 - intq2;
-
-                intq4 = 0;
-            } else if (intq1+intq2+intq3+intq4>qty) {
-                log.info(com.smartapi.Constants.IMP_LOG+"Adjusting Qty4");
-                intq4 = qty - intq1 - intq2 - intq3;
-            }
-            List<Integer> qtys1 = getQtyList(intq1, maxQty, lotSize);
-            List<Integer> qtys2 = getQtyList(intq2, maxQty, lotSize);
-            List<Integer> qtys3 = getQtyList(intq3, maxQty, lotSize);
-            List<Integer> qtys4 = getQtyList(intq4, maxQty, lotSize);
-
-            log.info(com.smartapi.Constants.IMP_LOG+"Trade Details: Q1 {}, Q2 {}, Q3 {}, Q4 {} p1 {}, p2 {}, p3 {}, p4 {}\n",
-                    intq1, intq2, intq3, intq4, sellLtp, trg1, trg2, trg3);
-
-            Order sellOrder;
-
-            for (Integer qt : qtys1) {
-                sellOrder = stopAtMaxLossScheduler.placeOrder(sellSymbolData.getSymbol(), sellSymbolData.getToken(), sellLtp, qt, Constants.TRANSACTION_TYPE_SELL, 0.0);
+            for (i = 0; i < fullBatches; i++) {
+                Order sellOrder = stopAtMaxLossScheduler.placeOrder(sellSymbolData.getSymbol(), sellSymbolData.getToken(), sellLtp, maxQty, Constants.TRANSACTION_TYPE_SELL, 0.0);
                 if (sellOrder != null) {
-                    opt = String.format(com.smartapi.Constants.IMP_LOG+"Sell order placed for %s, qty %d, Price %f", sellSymbolData.getSymbol(), qt, sellLtp);
+                    opt = String.format(com.smartapi.Constants.IMP_LOG + "Sell order placed for %s, qty %d, Price %f", sellSymbolData.getSymbol(), maxQty, sellLtp);
                     log.info(opt);
                     sendMessage.sendMessage(opt);
                 } else {
-                    opt = String.format(com.smartapi.Constants.IMP_LOG+"Sell order failed for %s, qty %d Price %f", sellSymbolData.getSymbol(), qt, sellLtp);
+                    opt = String.format(com.smartapi.Constants.IMP_LOG + "Sell order failed for %s, qty %d Price %f", sellSymbolData.getSymbol(), maxLoss, sellLtp);
                     log.info(opt);
                     sendMessage.sendMessage(opt);
                 }
             }
-
-            for (Integer qt : qtys2) {
-                sellOrder = stopAtMaxLossScheduler.placeOrder(sellSymbolData.getSymbol(), sellSymbolData.getToken(), sellLtp, qt, Constants.TRANSACTION_TYPE_SELL, trg1);
+            if (remainingQty > 0) {
+                Order sellOrder = stopAtMaxLossScheduler.placeOrder(sellSymbolData.getSymbol(), sellSymbolData.getToken(), sellLtp, remainingQty, Constants.TRANSACTION_TYPE_SELL, 0.0);
                 if (sellOrder != null) {
-                    opt = String.format(com.smartapi.Constants.IMP_LOG+"Sell order placed for %s, qty %d. Trigger price %f", sellSymbolData.getSymbol(), qt, trg1);
+                    opt = String.format(com.smartapi.Constants.IMP_LOG + "Sell order placed for %s, qty %d, Price %f", sellSymbolData.getSymbol(), remainingQty, sellLtp);
                     log.info(opt);
                     sendMessage.sendMessage(opt);
                 } else {
-                    opt = String.format(com.smartapi.Constants.IMP_LOG+"Sell order failed for %s, qty %d. Trigger price %f", sellSymbolData.getSymbol(), qt, trg1);
+                    opt = String.format(com.smartapi.Constants.IMP_LOG + "Sell order failed for %s, qty %d Price %f", sellSymbolData.getSymbol(), maxLoss, sellLtp);
                     log.info(opt);
                     sendMessage.sendMessage(opt);
                 }
             }
 
-            for (Integer qt : qtys3) {
-                sellOrder = stopAtMaxLossScheduler.placeOrder(sellSymbolData.getSymbol(), sellSymbolData.getToken(), sellLtp, qt, Constants.TRANSACTION_TYPE_SELL, trg2);
-                if (sellOrder != null) {
-                    opt = String.format(com.smartapi.Constants.IMP_LOG+"Sell order placed for %s, qty %d. Trigger price %f", sellSymbolData.getSymbol(), qt, trg2);
-                    log.info(opt);
-                    sendMessage.sendMessage(opt);
-                } else {
-                    opt = String.format(com.smartapi.Constants.IMP_LOG+"Sell order failed for %s, qty %d. Trigger price %f", sellSymbolData.getSymbol(), qt, trg2);
-                    log.info(opt);
-                    sendMessage.sendMessage(opt);
-                }
-            }
-
+            log.info("Sell orders placed");
+            log.info("Finished RR2 trade");
+            sendMessage.sendMessage("RR2 Trade placed");
             configs.setOiBasedTradePlaced(true);
         } else {
             log.info(com.smartapi.Constants.IMP_LOG+"Trade found but oi based trade not enabled or trade already placed. Check if manual trade required. Sell {}\n", tradeSymbol);
@@ -1393,13 +1348,13 @@ public class OITrackScheduler {
 
             Double ltpLimit;
             if (indexName.equals("MIDCPNIFTY")) {
-                ltpLimit = 5.0;
+                ltpLimit = 10.0;
             } else if (indexName.equals("BANKNIFTY")) {
-                ltpLimit = 20.0;
+                ltpLimit = 35.0;
             } else if (indexName.equals(SENSEX)) {
                 ltpLimit = 50.0;
             } else {
-                ltpLimit = 9.0;
+                ltpLimit = 15.0;
             }
             log.info("Ltp limit {}", ltpLimit);
 

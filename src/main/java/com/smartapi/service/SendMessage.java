@@ -61,7 +61,7 @@ public class SendMessage {
 				javaMailSender.send(msg);
 				log.info("Email sent");
 			} catch (Exception e) {
-				log.error(Constants.IMP_LOG+"Error in sending mail ", e);
+				log.error(Constants.IMP_LOG+"Error in sending mail {}", e.getMessage());
 			}
 		}
 

@@ -385,10 +385,10 @@ public class OITrackScheduler {
 
 
         int oi;
-        int niftyDiff = 500; // index value diff
-        int finniftyDiff = 500;
-        int midcapDiff = 500;
-        int bankNiftyDiff = 800;
+        int niftyDiff = 700; // index value diff
+        int finniftyDiff = 700;
+        int midcapDiff = 700;
+        int bankNiftyDiff = 1300;
         int senSxDiff = 1000;
         StringBuilder email = new StringBuilder();
         List<SymbolData> symbols = configs.getSymbolDataList();
@@ -1169,13 +1169,13 @@ public class OITrackScheduler {
 
             strikeDiff = 100; // used for buy order
             if (indexName.equals("MIDCPNIFTY")) {
-                strikeDiff = 50;
+                strikeDiff = 100;
             } else if (indexName.equals("BANKNIFTY")) {
-                strikeDiff = 300;
+                strikeDiff = 500;
             } else if (indexName.equals(SENSEX)) {
                 strikeDiff = 300;
             } else {
-                strikeDiff = 150;
+                strikeDiff = 250;
             }
             // strikeDiff = getIndexStepSize(indexName);
 

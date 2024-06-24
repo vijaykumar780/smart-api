@@ -529,7 +529,7 @@ public class StopAtMaxLossScheduler {
             if (netQty < 0) {
                 netQty = -netQty;
             }
-            double slPrice = ltp + ((sellAvgPrice - buyAvgPrice) * 0.85);
+            double slPrice = sellAvgPrice + ((sellAvgPrice - buyAvgPrice) * 0.85);
 
             boolean isStrictSlAlreadyPlaced = false;
             int orderQty = 0;
@@ -609,6 +609,7 @@ public class StopAtMaxLossScheduler {
                             log.info(opt);
                         }
                     }
+                    sendMessage.sendMessage("Placed strict sl orders for "+ sellOptionSymbol);
                     log.info(com.smartapi.Constants.IMP_LOG + "Placed strict sl orders");
                 }
             } else {

@@ -104,15 +104,15 @@ public class OITrackScheduler {
         if (success == 1) {
             StringBuilder content = new StringBuilder();
             content.append("Total symbols loaded: " + configs.getSymbolDataList().size());
-            content.append("\n");
+            content.append(". ");
 
-            content.append("Max Oi based trade placed: " + configs.isMaxOiBasedTradePlaced() + "\n");
-            content.append("Gmail password sent count: " + configs.getGmailPassSentCount() + "\n");
-            content.append("Total max orders allowed: " + configs.getTotalMaxOrdersAllowed() + "\n");
-            content.append("Traded Options: " + configs.getTradedOptions() + "\n");
-            content.append("Oi Based trade placed: " + configs.getOiBasedTradePlaced() + "\n");
+            content.append("Max Oi based trade placed: " + configs.isMaxOiBasedTradePlaced() + ". ");
+            content.append("Gmail password sent count: " + configs.getGmailPassSentCount() + ". ");
+            content.append("Total max orders allowed: " + configs.getTotalMaxOrdersAllowed() + ". ");
+            content.append("Traded Options: " + configs.getTradedOptions() + ". ");
+            content.append("Oi Based trade placed: " + configs.getOiBasedTradePlaced() + ". ");
 
-            //sendMessage.sendMessage(content.toString());
+            sendMessage.sendMessage(content.toString());
             log.info(com.smartapi.Constants.IMP_LOG+"Data loaded of symbols");
         } else {
             sendMessage.sendMessage("Failed data loaded for symbols");

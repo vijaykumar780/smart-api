@@ -1,5 +1,6 @@
 package com.smartapi.service;
 
+import com.amazonaws.HandlerContextAware;
 import com.amazonaws.services.sns.AmazonSNSClient;
 import com.amazonaws.services.sns.model.PublishRequest;
 import com.smartapi.Configs;
@@ -14,6 +15,7 @@ import org.springframework.mail.SimpleMailMessage;
 import org.springframework.stereotype.Service;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import java.time.Instant;
 
@@ -33,7 +35,7 @@ public class SendMessage {
 	@Autowired
 	AmazonSNSClient snsClient;
 
-	int sns = 0;
+	int sns = 5;
 	public void sendMessage(String message) {
 		if (message != null && message.contains("Failed to")) {
 			// reinit session repeated errors
@@ -50,7 +52,7 @@ public class SendMessage {
 		if (sns==1) {
 			snsClient.publish(new PublishRequest("arn:aws:sns:ap-south-1:801536992554:sms", message));
 			log.info("Message sent");
-		} else {
+		} else if (sns==2) {
 			SimpleMailMessage msg = new SimpleMailMessage();
 			msg.setTo("vijaykumarvijay886@gmail.com");
 
@@ -62,6 +64,15 @@ public class SendMessage {
 				log.info("Email sent");
 			} catch (Exception e) {
 				log.error(Constants.IMP_LOG+"Error in sending mail {}", e.getMessage());
+			}
+		} else {
+			try {
+				UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromUriString(configs.getTelegramBot())
+								.queryParam("chat_id", 717303988)
+										.queryParam("text", message.replace(" ", "+"));
+				restTemplate.exchange(uriComponentsBuilder.toUriString(), HttpMethod.GET, new HttpEntity<>(new HttpHeaders()), String.class);
+			} catch (Exception e) {
+				log.error("Error sending notification through telegram {}", e.getMessage());
 			}
 		}
 

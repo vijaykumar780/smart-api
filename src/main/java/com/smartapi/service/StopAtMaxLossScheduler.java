@@ -239,6 +239,7 @@ public class StopAtMaxLossScheduler {
                 buyamount = buyamount + Double.parseDouble(pos.optString("buyamount"));
             }
         }
+
         boolean isTradeAllowed = true;
         if (now.isAfter(LocalTime.of(9,15)) && now.isBefore(LocalTime.of(11,30)) && mtm != 0.00) {
             isTradeAllowed = false;

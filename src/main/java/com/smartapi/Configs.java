@@ -133,6 +133,9 @@ public class Configs {
 	@Value("${rrLoss}")
 	private int rrLoss;
 
+	@Value("${telegramBot}")
+	private String telegramBot;
+
 	private List<SymbolData> symbolDataList;
 
 	private Map<String, SymbolData> symbolMap;
@@ -186,6 +189,14 @@ public class Configs {
 
 	public void setSymbolFilePath(String symbolFilePath) {
 		this.symbolFilePath = symbolFilePath;
+	}
+
+	public String getTelegramBot() {
+		return telegramBot;
+	}
+
+	public void setTelegramBot(String telegramBot) {
+		this.telegramBot = telegramBot;
 	}
 
 	public int getRrProfit() {

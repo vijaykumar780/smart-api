@@ -30,7 +30,7 @@ public class TradeAndEmailRefreshScheduler {
     @Scheduled(fixedDelay = 1640000000)
     public void refreshEmail() throws UnknownHostException {
 
-        sendMessage.sendMessage("ALGO App started " + InetAddress.getLocalHost().toString());
+        sendMessage.sendMessage("ALGO App started " + InetAddress.getLocalHost().toString() + "Build : " + Constants.build);
         log.info(Constants.IMP_LOG+"Start Email sent");
     }
 }

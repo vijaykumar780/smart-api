@@ -315,7 +315,7 @@ public class OITrackScheduler {
         }
 
         LocalTime localStartTimeMarket = LocalTime.of(11, 45, 0);
-        LocalTime localEndTime = LocalTime.of(20, 20, 1);
+        LocalTime localEndTime = LocalTime.of(22, 20, 1);
         LocalTime now1 = LocalTime.now();
         if (!(now1.isAfter(localStartTimeMarket) && now1.isBefore(localEndTime))) {
             log.info("Oi based trade not allowed as time is not bw {} and {}", localStartTimeMarket, localEndTime);

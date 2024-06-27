@@ -140,7 +140,7 @@ public class StopAtMaxLossScheduler {
 
     public void stopOnMaxLossProcess(boolean exitALLFlag) throws Exception {
         LocalTime localStartTimeMarket = LocalTime.of(9,15,0);
-        LocalTime localEndTime = LocalTime.of(21,0,5);
+        LocalTime localEndTime = LocalTime.of(16,0,0);
         LocalTime localEndTimeMarket = LocalTime.of(15,30,1);
         LocalTime now = LocalTime.now();
         if (!(now.isAfter(localStartTimeMarket) && now.isBefore(localEndTime))) {

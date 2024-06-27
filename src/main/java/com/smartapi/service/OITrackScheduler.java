@@ -314,7 +314,7 @@ public class OITrackScheduler {
             return;
         }
 
-        LocalTime localStartTimeMarket = LocalTime.of(13, 0, 0);
+        LocalTime localStartTimeMarket = com.smartapi.Constants.cutoffTime;
         LocalTime localEndTime = LocalTime.of(15, 40, 0);
         LocalTime now1 = LocalTime.now();
         if (!(now1.isAfter(localStartTimeMarket) && now1.isBefore(localEndTime))) {

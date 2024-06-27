@@ -529,7 +529,7 @@ public class StopAtMaxLossScheduler {
             if (netQty < 0) {
                 netQty = -netQty;
             }
-            double slPrice = sellAvgPrice + ((sellAvgPrice - buyAvgPrice) * 0.85);
+            double slPrice = sellAvgPrice + ((sellAvgPrice - buyAvgPrice));
 
             boolean isStrictSlAlreadyPlaced = false;
             int orderQty = 0;

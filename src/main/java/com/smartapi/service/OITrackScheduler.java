@@ -314,8 +314,8 @@ public class OITrackScheduler {
             return;
         }
 
-        LocalTime localStartTimeMarket = LocalTime.of(11, 45, 0);
-        LocalTime localEndTime = LocalTime.of(22, 20, 1);
+        LocalTime localStartTimeMarket = LocalTime.of(13, 0, 0);
+        LocalTime localEndTime = LocalTime.of(15, 40, 0);
         LocalTime now1 = LocalTime.now();
         if (!(now1.isAfter(localStartTimeMarket) && now1.isBefore(localEndTime))) {
             log.info("Oi based trade not allowed as time is not bw {} and {}", localStartTimeMarket, localEndTime);
@@ -609,7 +609,7 @@ public class OITrackScheduler {
             }
         }
 
-        if (LocalTime.now().isAfter(LocalTime.of(14, 10)) && !email.toString().isEmpty()) {
+        if (LocalTime.now().isAfter(LocalTime.of(14, 20)) && !email.toString().isEmpty()) {
             sendMessage.sendMessage(email.toString());
         }
         boolean traded = false;
